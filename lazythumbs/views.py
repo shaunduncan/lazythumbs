@@ -9,7 +9,7 @@ from django.http import HttpResponse
 from sorl.thumbnail import default
 from sorl.thumbnail.base import ThumbnailBackend
 from sorl.thumbnail.images import ImageFile
-#from sorl.thumbnail.shortcuts import get_thumbnail
+from sorl.thumbnail.parsers import parse_geometry
 
 def img_cache_key(img_path):
     """ returns a cache key suitable for storing thumbnail metadata. """
@@ -51,18 +51,36 @@ def thumbnail(request, img_path, width, height):
     else:
         # we need to process this file: either generate a thumbnail or conclude
         # 404.
-        if (os.exists(img_path)):
-            # we can process it.
+        if (os.path.exists(img_path)): #, then we can process it.
             geometry = '%sx%s' % (width, height)
             source = ImageFile(img_path, default.storage)
             tb = ThumbnailBackend()
-            thumbmail_path = tb._get_thumbnail_filename(img_path, geometry, tb.default_options)
+            options = tb.default_options
+            thumbnail_path = tb._get_thumbnail_filename(source, geometry, options)
             thumbnail = ImageFile(thumbnail_path, default.storage)
-            tb._create_thumbnail(source, geometry, tb.default_options, thumbnail)
-            # TODO are we double dipping here? shouldn't the image contents already be in RAM?
-            response.content = thumbnail.read()
+
+            # create the thumbnail in memory
+            # TODO this is bugging out...
+            ratio = default.engine.get_image_ratio(source)
+            geometry = parse_geometry(geometry, ratio)
+            image = default.engine.create(source, geometry, options)
+
+            # extract its raw data
+            format_ = options['format']
+            quality = options['quality']
+            progressive = options.get('progressive', settings.THUMBNAIL_PROGRESSIVE)
+            img_data = default.engine._get_raw_data(image, format_, quality, progressive=progressive)
+
+            # save raw data to filesystem
+            thumbnail.write(img_data)
+
+            # put raw data in response
+            response.content = img_data
+
+            # cache path to written thumbnail
             img_meta = {'path':thumbnail_path, 'was_404':False}
             cache.set(cache_key, json.dumps(img_meta), settings.THUMBNAIL_CACHE_TIMEOUT)
+
             return response
         else:
             # img_path doesn't exist, so return 404.
