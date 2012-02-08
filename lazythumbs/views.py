@@ -49,13 +49,10 @@ def thumbnail(request, img_path, width, height):
 
     img_meta = cache.get(cache_key)
 
-    print ">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
     if img_meta:
-        print "CACHE HIT FOR %s" % img_path
         # we've processed this already. see if it exists or should be a 404.
         img_meta = json.loads(img_meta)
         if not img_meta.get('was_404'):
-            print "IMG WAS NOT A 404 LAST TIME"
             # generated thumbnail exists on filesystem,
             # read and return it.
             thumbnail_path = img_meta['path']
@@ -63,17 +60,15 @@ def thumbnail(request, img_path, width, height):
             response.content = thumbnail.read()
             return response
         else:
-            print "IMG WAS A 404 LAST TIME."
             # no thumbnail (because img_path doesn't exist.) just continue to
             # return a 404.
             response.status_code = 404
             return response
     else:
-        print "CACHE MISS FOR %s" % img_path
         # we need to process this file: either generate a thumbnail or conclude
         # 404.
         if (os.path.exists(img_path)): #, then we can process it.
-            print "FOUND IMAGE ON FS"
+            tb = ThumbnailBackend()
             tb = ThumbnailBackend()
             options = tb.default_options
             options['crop'] = 'left'
@@ -111,16 +106,13 @@ def thumbnail(request, img_path, width, height):
             # cache path to written thumbnail
             img_meta = {'path':thumbnail_path, 'was_404':False}
             cache.set(cache_key, json.dumps(img_meta), settings.THUMBNAIL_CACHE_TIMEOUT)
-            print "CACHED IMAGE"
 
             return response
         else:
-            print "DID NOT FIND IMG ON FS"
             # img_path doesn't exist, so return 404.
             img_meta_json = json.dumps({'path':'', 'was_404':True})
             expires = settings.THUMBNAIL_404_CACHE_TIMEOUT
             cache.set(cache_key, img_meta_json, expires)
-            print "CACHED 404"
             response.status_code = 404
             return response
 
