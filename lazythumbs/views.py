@@ -13,13 +13,22 @@ from sorl.thumbnail.parsers import parse_geometry
 
 # TODO
 # bug: cache does not respect img dimensions. consider using the "_get_thumbnail_filename" for caching.
-# bug: THUMBNAIL_PREFIX 
+# doc: settings
 # feat: cache headers outbound
 # feat: regen on cache hit, fs miss
 
-def img_cache_key(img_path):
-    """ returns a cache key suitable for storing thumbnail metadata. """
-    return "lazythumbs:%s" % img_path
+def img_cache_key(img_path, geometry, action):
+    """
+    returns a cache key suitable for storing thumbnail metadata. We need a key
+    that represents both the action taken and the target geometry of the newly
+    created image. We currently only support 'thumbnail' as an action but in
+    the future there will be actions like 'crop' and 'filter'.
+
+    :param img_path: path to image relative to settings.THUMBNAIL_SOURCE
+    :param geometry: WxH string representing image dimensions, eg "30x50".
+    :param action: string representing the action taken, eg "thumbnail"
+    """
+    return "lazythumbs:%s:%s:%s" % (action, geometry, img_path)
 
 def thumbnail(request, img_path, width, height):
     """
@@ -33,9 +42,10 @@ def thumbnail(request, img_path, width, height):
     :param height: integer height in pixels
     """
     response = HttpResponse(content_type='image/jpeg')
-
+    geometry = '%sx%s' % (width, height)
     img_path = os.path.join(settings.THUMBNAIL_SOURCE_PATH, img_path)
-    cache_key = img_cache_key(img_path)
+
+    cache_key = img_cache_key(img_path, geometry, 'thumbnail')
 
     img_meta = cache.get(cache_key)
 
@@ -64,9 +74,9 @@ def thumbnail(request, img_path, width, height):
         # 404.
         if (os.path.exists(img_path)): #, then we can process it.
             print "FOUND IMAGE ON FS"
-            geometry = '%sx%s' % (width, height)
             tb = ThumbnailBackend()
             options = tb.default_options
+            options['crop'] = 'left'
 
             # source is an ImageFile; a sorl-thumbnail abstraction for image
             # files on the fs. source_img is an Image; a wrapper around
