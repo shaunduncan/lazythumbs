@@ -53,29 +53,35 @@ def thumbnail(request, img_path, width, height):
         # 404.
         if (os.path.exists(img_path)): #, then we can process it.
             geometry = '%sx%s' % (width, height)
-            source = ImageFile(img_path, default.storage)
             tb = ThumbnailBackend()
             options = tb.default_options
+
+            # source is an ImageFile; a sorl-thumbnail abstraction for image
+            # files on the fs. source_img is an Image; a wrapper around
+            # in-memory PIL (or whatever engine) image data.
+            source = ImageFile(img_path, default.storage)
+            source_img = default.engine.get_image(source)
+            source.set_size(default.engine.get_image_size(source_img))
+
             thumbnail_path = tb._get_thumbnail_filename(source, geometry, options)
             thumbnail = ImageFile(thumbnail_path, default.storage)
 
             # create the thumbnail in memory
-            # TODO this is bugging out...
             ratio = default.engine.get_image_ratio(source)
             geometry = parse_geometry(geometry, ratio)
-            image = default.engine.create(source, geometry, options)
+            thumbnail_img = default.engine.create(source_img, geometry, options)
 
             # extract its raw data
-            format_ = options['format']
-            quality = options['quality']
-            progressive = options.get('progressive', settings.THUMBNAIL_PROGRESSIVE)
-            img_data = default.engine._get_raw_data(image, format_, quality, progressive=progressive)
+            f = options['format']
+            q = options['quality']
+            prog = options.get('progressive', settings.THUMBNAIL_PROGRESSIVE)
+            thumbnail_raw = default.engine._get_raw_data(thumbnail_img, f, q, progressive=prog)
 
             # save raw data to filesystem
-            thumbnail.write(img_data)
+            thumbnail.write(thumbnail_raw)
 
             # put raw data in response
-            response.content = img_data
+            response.content = thumbnail_raw
 
             # cache path to written thumbnail
             img_meta = {'path':thumbnail_path, 'was_404':False}
