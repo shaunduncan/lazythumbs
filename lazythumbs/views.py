@@ -89,13 +89,13 @@ def thumbnail(request, img_path, width, height):
     """
     def four_oh_four():
         resp = HttpResponse(status=404, content_type='image/jpeg')
-        response['Cache-Control'] = 'public,max-age=%s' % settings.THUMBNAIL_404_CACHE_TIMEOUT
-        return response
+        resp['Cache-Control'] = 'public,max-age=%s' % settings.THUMBNAIL_404_CACHE_TIMEOUT
+        return resp
 
     def two_hundred(data):
         resp = HttpResponse(data, content_type='image/jpeg')
-        response['Cache-Control'] = 'public,max-age=%s' % settings.THUMBNAIL_CACHE_TIMEOUT
-        return response
+        resp['Cache-Control'] = 'public,max-age=%s' % settings.THUMBNAIL_CACHE_TIMEOUT
+        return resp
 
     geometry = '%sx%s' % (width, height)
     img_path = os.path.join(settings.THUMBNAIL_SOURCE_PATH, img_path)
