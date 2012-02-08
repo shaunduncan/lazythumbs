@@ -13,6 +13,9 @@ from sorl.thumbnail.parsers import parse_geometry
 
 # TODO
 # bug: cache does not respect img dimensions. consider using the "_get_thumbnail_filename" for caching.
+# bug: THUMBNAIL_PREFIX 
+# feat: cache headers outbound
+# feat: regen on cache hit, fs miss
 
 def img_cache_key(img_path):
     """ returns a cache key suitable for storing thumbnail metadata. """
@@ -87,6 +90,9 @@ def thumbnail(request, img_path, width, height):
             thumbnail_raw = default.engine._get_raw_data(thumbnail_img, f, q, progressive=prog)
 
             # save raw data to filesystem
+            # we don't have to worry about filesystem collisions (and
+            # subsequent file corruption) since django's storage abstraction
+            # layer handles all that for us (thanks django).
             thumbnail.write(thumbnail_raw)
 
             # put raw data in response
