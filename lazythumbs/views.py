@@ -13,7 +13,6 @@ from sorl.thumbnail.parsers import parse_geometry
 
 # TODO
 # doc: settings
-# feat: cache headers outbound
 
 def img_cache_key(img_path, width, height, action):
     """
@@ -88,7 +87,16 @@ def thumbnail(request, img_path, width, height):
     :param width: integer width in pixels
     :param height: integer height in pixels
     """
-    response = HttpResponse(content_type='image/jpeg')
+    def four_oh_four():
+        resp = HttpResponse(status=404, content_type='image/jpeg')
+        response['Cache-Control'] = 'public,max-age=%s' % settings.THUMBNAIL_404_CACHE_TIMEOUT
+        return response
+
+    def two_hundred(data):
+        resp = HttpResponse(data, content_type='image/jpeg')
+        response['Cache-Control'] = 'public,max-age=%s' % settings.THUMBNAIL_CACHE_TIMEOUT
+        return response
+
     geometry = '%sx%s' % (width, height)
     img_path = os.path.join(settings.THUMBNAIL_SOURCE_PATH, img_path)
 
@@ -108,35 +116,27 @@ def thumbnail(request, img_path, width, height):
                 thumbnail_raw = thumbnail.read()
             else:
                 _, thumbnail_raw = generate_thumbnail_from_path(img_path, width, height)
-            response.content = thumbnail_raw
 
-            return response
+            return two_hundred(thumbnail_raw)
         else:
-            # no thumbnail (because img_path doesn't exist.) just continue to
-            # return a 404.
-            response.status_code = 404
-            return response
+            # no thumbnail since img_path doesn't exist.
+            return four_oh_four()
     else:
-        # we need to process this file: either generate a thumbnail or conclude
-        # 404.
+        # we need to process this file: either create a thumbnail or 404.
         if (os.path.exists(img_path)): #, then we can process it.
             thumbnail_path, thumbnail_raw = generate_thumbnail_from_path(img_path, width, height)
-
-            # put raw data in response
-            response.content = thumbnail_raw
 
             # cache path to written thumbnail
             img_meta = {'thumbnail_path':thumbnail_path, 'was_404':False}
             cache.set(cache_key, json.dumps(img_meta), settings.THUMBNAIL_CACHE_TIMEOUT)
 
-            return response
+            return two_hundred(thumbnail_raw)
         else:
             # img_path doesn't exist, so return 404.
             img_meta_json = json.dumps({'thumbnail_path':'', 'was_404':True})
             expires = settings.THUMBNAIL_404_CACHE_TIMEOUT
             cache.set(cache_key, img_meta_json, expires)
-            response.status_code = 404
-            return response
+            return four_oh_four()
 
 def default_thumbnail(request, img_path):
     """
