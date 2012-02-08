@@ -69,7 +69,6 @@ def thumbnail(request, img_path, width, height):
         # 404.
         if (os.path.exists(img_path)): #, then we can process it.
             tb = ThumbnailBackend()
-            tb = ThumbnailBackend()
             options = tb.default_options
             options['crop'] = 'left'
 
