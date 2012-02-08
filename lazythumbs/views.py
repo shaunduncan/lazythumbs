@@ -104,23 +104,19 @@ def thumbnail(request, img_path, width, height):
 
     img_meta = cache.get(cache_key)
 
-    if img_meta:
-        # we've processed this already. see if it exists or should be a 404.
+    if img_meta: #, then we've processed this already. see if it exists.
         img_meta = json.loads(img_meta)
-        if not img_meta.get('was_404'):
-            # check and see if we've hit in the cache but the file is missing
-            # from filesystem
-            thumbnail_path = img_meta['thumbnail_path']
-            if os.path.exists(thumbnail_path):
-                thumbnail = ImageFile(thumbnail_path, default.storage)
-                thumbnail_raw = thumbnail.read()
-            else:
-                _, thumbnail_raw = generate_thumbnail_from_path(img_path, width, height)
-
-            return two_hundred(thumbnail_raw)
-        else:
-            # no thumbnail since img_path doesn't exist.
+        if img_meta.get('was_404'): #, then nothing to do. still a 404.
             return four_oh_four()
+        # check and see if img is in cache but not filesystem.
+        thumbnail_path = img_meta['thumbnail_path']
+        if os.path.exists(thumbnail_path): #, then read and return
+            thumbnail = ImageFile(thumbnail_path, default.storage)
+            thumbnail_raw = thumbnail.read()
+        else: # regnerate the image
+            _, thumbnail_raw = generate_thumbnail_from_path(img_path, width, height)
+
+        return two_hundred(thumbnail_raw)
     else:
         # we need to process this file: either create a thumbnail or 404.
         if (os.path.exists(img_path)): #, then we can process it.
