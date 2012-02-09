@@ -108,11 +108,12 @@ class WarmCacheThumbnailTest(TestCase):
 
     def test_hot_cache_hot_fs(self):
         """
-        Basic cached 200 case. Reads thumbnail and serves it without setting
-        anything new in cache.
+        Cached 200 case. Reads thumbnail and serves it without setting anything
+        new in cache.
         """
-        mif = Mock()
-        mif.read = Mock(return_value='data')
+        mif_instance = Mock()
+        mif_instance.read = Mock(return_value='data')
+        mif = Mock(return_value=mif_instance)
         mc = self.mc_factory('thumb/path', False)
         with patch(self.mp%'ImageFile', mif):
             with patch(self.mp%'cache', mc):
