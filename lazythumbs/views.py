@@ -43,7 +43,7 @@ def thumbnail(request, img_path, width, height):
         thumbnail_path = img_meta['thumbnail_path']
         thumbnail_path = os.path.join(settings.THUMBNAIL_SOURCE_PATH, thumbnail_path)
 
-        if not thumbnail_path or was_404: #, then nothing to do. 404.
+        if was_404: #, then nothing to do. 404.
             return four_oh_four()
 
         # check and see if img is in cache but not filesystem.
