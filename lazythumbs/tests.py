@@ -31,7 +31,7 @@ class ColdCacheThumbnailTest(TestCase):
         self.equal(cached['thumbnail_path'], '')
         self.equal(cached['was_404'], True)
 
-    @patch(mp%'cache', MockCache()
+    @patch(mp%'cache', MockCache())
     @patch(mp%'generate_thumbnail_from_path',Mock(return_value=('t/p','data')))
     def test_img_found(self, mos, mc):
         """
@@ -60,7 +60,7 @@ class WarmCacheThumbnailTest(TestCase):
     mp = 'lazythumbs.views.%s'
     tn = lambda ip: thumbnail(Mock(), ip, 48, 48)
 
-    def mc_factory(cls, **kwargs):
+    def mc_factory(**kwargs):
         """
         churn out mocked caches with a preset .get(). json-serializes
         incoming data. Also a rapper?
@@ -72,8 +72,8 @@ class WarmCacheThumbnailTest(TestCase):
         return mc
 
     @patch(mp%'cache', mc_factory(thumbnail_path='', was_404=True))
-    @patch(mp%'generate_thumbnail_from_path', Mock()))
-    def test_was_404(TestCase, mgt, mc):
+    @patch(mp%'generate_thumbnail_from_path', Mock())
+    def test_was_404(self, mgt, mc):
         """
         Ensure we go straight to a 404 response without setting anything new in
         cache or touching filesystem if we encounter a cached 404.
@@ -86,8 +86,8 @@ class WarmCacheThumbnailTest(TestCase):
 
     @patch(mp%'cache', mc_factory(thumbnail_path='thumb/path', was_404=False))
     @patch(mp%'generate_thumbnail_from_path', Mock(return_value=('','data')))
-    @patch(mp%'ImageFile', Mock(side_effect=IOError)
-    def test_hot_cache_cold_fs(TestCase, mif, mgt, mc):
+    @patch(mp%'ImageFile', Mock(side_effect=IOError))
+    def test_hot_cache_cold_fs(self, mif, mgt, mc):
         """
         When a thumbnail is recorded as a 200 in cache but is gone from the
         file system, make sure we regenerate and return 200.
@@ -99,7 +99,7 @@ class WarmCacheThumbnailTest(TestCase):
         self.equal(resp.status_code, 200)
 
     @patch(mp%'cache', mc_factory(thumbnail_path='thumb/path', was_404=False))
-    def test_hot_cache_hot_fs(TestCase, mc):
+    def test_hot_cache_hot_fs(self, mc):
         """
         Basic cached 200 case. Reads thumbnail and serves it without setting
         anything new in cache.
