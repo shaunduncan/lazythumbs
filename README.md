@@ -25,9 +25,9 @@
 ## summary
 
 lazythumbs acts as a thumbnailing proxy for images stored in
-settings.THUMBNAIL\_SOURCE. It looks for the requested image and, if found,
-generates a thumbnail and writes it to the filesystem at
-settings.THUMBNAIL\_SOURCE/settings.THUMBNAIL\_PREFIX/. The path to the generated
+THUMBNAIL\_SOURCE. It looks for the requested image and, if found,
+generates a thumbnail and writes it to the filesystem at THUMBNAIL\_SOURCE/THUMBNAIL\_PREFIX/. 
+The path to the generated
 thumbnail is cached, as is whether or not the request resulted in a 404 or not
 (to avoid getting hammered by repeated requests for images that don't exist).
 
