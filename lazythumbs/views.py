@@ -1,4 +1,3 @@
-""" primary work of this app is done in the views. """
 import json
 import os
 
@@ -11,8 +10,77 @@ from sorl.thumbnail.base import ThumbnailBackend
 from sorl.thumbnail.images import ImageFile
 from sorl.thumbnail.parsers import parse_geometry
 
-# TODO
-# doc: settings
+def thumbnail(request, img_path, width, height):
+    """
+    Generate a thumbnail from img_path using the supplied width and height.
+    a request for upscaling will generate a "thumbnail" but just leave the
+    image at its existing dimensions. Responds with an image/jpeg. Defaults to
+    a "resize and crop" with a left crop by default.
+
+    :param request: HttpRequest object
+    :param img_path: image filesystem path relative to THUMBNAIL_SOURCE
+    :param width: integer width in pixels
+    :param height: integer height in pixels
+    """
+    def four_oh_four():
+        resp = HttpResponse(status=404, content_type='image/jpeg')
+        resp['Cache-Control'] = 'public,max-age=%s' % settings.THUMBNAIL_404_CACHE_TIMEOUT
+        return resp
+
+    def two_hundred(data):
+        resp = HttpResponse(data, content_type='image/jpeg')
+        resp['Cache-Control'] = 'public,max-age=%s' % settings.THUMBNAIL_CACHE_TIMEOUT
+        return resp
+
+    geometry = '%sx%s' % (width, height)
+    img_path = os.path.join(settings.THUMBNAIL_SOURCE_PATH, img_path)
+    cache_key = img_cache_key(img_path, width, height, 'thumbnail')
+
+    img_meta = cache.get(cache_key)
+    if img_meta: #, then we've processed this already. see if it exists.
+        img_meta = json.loads(img_meta)
+        was_404 = img_meta['was_404']
+        thumbnail_path = img_meta['thumbnail_path']
+        thumbnail_path = os.path.join(settings.THUMBNAIL_SOURCE_PATH, thumbnail_path)
+
+        if not thumbnail_path or was_404: #, then nothing to do. 404.
+            return four_oh_four()
+
+        # check and see if img is in cache but not filesystem.
+        try:
+            thumbnail = ImageFile(thumbnail_path, default.storage)
+            thumbnail_raw = thumbnail.read()
+        except IOError:
+            _, thumbnail_raw = generate_thumbnail_from_path(img_path, width, height)
+        finally:
+            return two_hundred(thumbnail_raw)
+
+    # img was not found in cache. we need to look for and process the image.
+    if (os.path.exists(img_path)): #, then we can process it.
+        thumbnail_path, thumbnail_raw = generate_thumbnail_from_path(img_path, width, height)
+
+        img_meta = {'thumbnail_path':thumbnail_path, 'was_404':False}
+        cache.set(cache_key, json.dumps(img_meta), settings.THUMBNAIL_CACHE_TIMEOUT)
+
+        return two_hundred(thumbnail_raw)
+
+    # finally, give up and 404. Cache the 404 so we don't do this dance again.
+    img_meta_json = json.dumps({'thumbnail_path':'', 'was_404':True})
+    expires = settings.THUMBNAIL_404_CACHE_TIMEOUT
+    cache.set(cache_key, img_meta_json, expires)
+
+    return four_oh_four()
+
+def default_thumbnail(request, img_path):
+    """
+    simple wrapper around thumbnail that passes
+    settings.THUMBNAIL_DEFAULT_WIDTH and settings.THUMBNAIL_DEFAULT_HEIGHT
+
+    :param img_path: image filesystem path relative to THUMBNAIL_SOURCE
+    """
+    width = settings.THUMBNAIL_DEFAULT_WIDTH
+    height = settings.THUMBNAIL_DEFAULT_HEIGHT
+    return thumbnail(request, img_path, width, height)
 
 def img_cache_key(img_path, width, height, action):
     """
@@ -75,72 +143,3 @@ def generate_thumbnail_from_path(img_path, width, height, crop='left'):
 
     return thumbnail_path, thumbnail_raw
 
-def thumbnail(request, img_path, width, height):
-    """
-    Generate a thumbnail from img_path using the supplied width and height.
-    a request for upscaling will generate a "thumbnail" but just leave the
-    image at its existing dimensions. Responds with an image/jpeg. Defaults to
-    a "resize and crop" with a left crop by default.
-
-    :param request: HttpRequest object
-    :param img_path: image filesystem path relative to THUMBNAIL_SOURCE
-    :param width: integer width in pixels
-    :param height: integer height in pixels
-    """
-    def four_oh_four():
-        resp = HttpResponse(status=404, content_type='image/jpeg')
-        resp['Cache-Control'] = 'public,max-age=%s' % settings.THUMBNAIL_404_CACHE_TIMEOUT
-        return resp
-
-    def two_hundred(data):
-        resp = HttpResponse(data, content_type='image/jpeg')
-        resp['Cache-Control'] = 'public,max-age=%s' % settings.THUMBNAIL_CACHE_TIMEOUT
-        return resp
-
-    geometry = '%sx%s' % (width, height)
-    img_path = os.path.join(settings.THUMBNAIL_SOURCE_PATH, img_path)
-
-    cache_key = img_cache_key(img_path, width, height, 'thumbnail')
-
-    img_meta = cache.get(cache_key)
-
-    if img_meta: #, then we've processed this already. see if it exists.
-        img_meta = json.loads(img_meta)
-        if img_meta.get('was_404'): #, then nothing to do. still a 404.
-            return four_oh_four()
-        # check and see if img is in cache but not filesystem.
-        thumbnail_path = img_meta['thumbnail_path']
-        if os.path.exists(thumbnail_path): #, then read and return
-            thumbnail = ImageFile(thumbnail_path, default.storage)
-            thumbnail_raw = thumbnail.read()
-        else: # regnerate the image
-            _, thumbnail_raw = generate_thumbnail_from_path(img_path, width, height)
-
-        return two_hundred(thumbnail_raw)
-    else:
-        # we need to process this file: either create a thumbnail or 404.
-        if (os.path.exists(img_path)): #, then we can process it.
-            thumbnail_path, thumbnail_raw = generate_thumbnail_from_path(img_path, width, height)
-
-            # cache path to written thumbnail
-            img_meta = {'thumbnail_path':thumbnail_path, 'was_404':False}
-            cache.set(cache_key, json.dumps(img_meta), settings.THUMBNAIL_CACHE_TIMEOUT)
-
-            return two_hundred(thumbnail_raw)
-        else:
-            # img_path doesn't exist, so return 404.
-            img_meta_json = json.dumps({'thumbnail_path':'', 'was_404':True})
-            expires = settings.THUMBNAIL_404_CACHE_TIMEOUT
-            cache.set(cache_key, img_meta_json, expires)
-            return four_oh_four()
-
-def default_thumbnail(request, img_path):
-    """
-    simple wrapper around thumbnail that passes
-    settings.THUMBNAIL_DEFAULT_WIDTH and settings.THUMBNAIL_DEFAULT_HEIGHT
-
-    :param img_path: image filesystem path relative to THUMBNAIL_SOURCE
-    """
-    width = settings.THUMBNAIL_DEFAULT_WIDTH
-    height = settings.THUMBNAIL_DEFAULT_HEIGHT
-    return thumbnail(request, img_path, width, height)
