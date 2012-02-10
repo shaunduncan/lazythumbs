@@ -1,8 +1,11 @@
 import json
-from mock import Mock, patch
 from unittest import TestCase
 
+from django import template
+from mock import Mock, patch
+
 from lazythumbs.views import thumbnail
+from lazythumbs.templatetags.lazythumb import lazythumb, LazyThumbNode
 
 class MockCache(object):
     def __init__(self):
@@ -11,6 +14,53 @@ class MockCache(object):
         self.cache[key] = value
     def get(self, key, default=None):
         return self.cache.get(key)
+
+class TemplateTagTest(TestCase):
+    """ Test the arg validation and output of the template tag. """
+    def test_too_many_args(self):
+        mt = Mock()
+        mt.contents = "tag url action geometry extra"
+        self.assertRaises(template.TemplateSyntaxError, lazythumb, Mock(), mt)
+
+    def test_too_few_args(self):
+        mt = Mock()
+        mt.contents = "tag url action"
+        self.assertRaises(template.TemplateSyntaxError, lazythumb, Mock(), mt)
+
+    def test_invalid_geometry(self):
+        mt = Mock()
+        mt.contents = "tag url resize boom"
+        self.assertRaises(template.TemplateSyntaxError, lazythumb, Mock(), mt)
+
+    def test_invalid_action(self):
+        mt = Mock()
+        mt.contents = "tag url boom 48"
+        self.assertRaises(template.TemplateSyntaxError, lazythumb, Mock(), mt)
+
+    def test_valid_thumbnail(self):
+        mt = Mock()
+        mt.contents = "tag url thumbnail 48"
+        node = lazythumb(Mock(), mt)
+        self.assertEqual(node.geometry, '48x48')
+        self.assertEqual(node.url_var.var, 'url')
+
+    def test_valid_resize(self):
+        mt = Mock()
+        mt.contents = "tag url resize 150x100"
+        node = lazythumb(Mock(), mt)
+        self.assertEqual(node.geometry, '150x100')
+        self.assertEqual(node.url_var.var, 'url')
+
+    def test_render_success(self):
+        node = LazyThumbNode('url', '100x200')
+        tag_str = node.render({'url':'resolved_url'})
+        self.assertEqual(tag_str,
+            '<img src="/lt/thumb/100/200/resolved_url/" width="100" height="200" />')
+
+    def test_render_no_url(self):
+        node = LazyThumbNode('url', '100x200')
+        self.assertRaises(template.VariableDoesNotExist, node.render, (node, {}))
+
 
 class ColdCacheThumbnailTest(TestCase):
     """ Test behavior of thumbnail view given a completely cold cache.  """
