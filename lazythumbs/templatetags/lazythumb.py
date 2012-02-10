@@ -15,14 +15,14 @@ def lazythumb(parser, token):
     try:
         tag, url, action, geometry = token.contents.split()
     except ValueError:
-        raise template.TemplateSyntaxError('%s requires exactly 3 arguments' % tag)
+        raise template.TemplateSyntaxError('%s requires exactly 3 arguments' % token.contents.split()[0])
 
     if not action in SUPPORTED_ACTIONS:
         raise template.TemplateSyntaxError('action argument must be one of %s', SUPPORTED_ACTIONS)
 
-    if geometry.match('^\d+$', geometry):
+    if re.match('^\d+$', geometry):
         geometry = '%sx%s' % (geometry, geometry)
-    elif not geometry.match('^\d+x\d+', geometry):
+    elif not re.match('^\d+x\d+', geometry):
         raise template.TemplateSyntaxError('geometry must be a single number or dimensions in the form widthxheight')
 
     # since we only support one action, don't bother passing action. this can
@@ -43,7 +43,7 @@ class LazyThumbNode(template.Node):
         url = self.url_var.resolve(context)
         width, height = self.geometry.split('x')
 
-        img_src = '/lt/thumb/%s/%s/%s/' % (url, width, height)
+        img_src = '/lt/thumb/%s/%s/%s/' % (width, height, url)
         img_tag = '<img src="%s" width="%s" height="%s" />' % (img_src, width, height)
 
         return img_tag
