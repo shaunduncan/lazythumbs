@@ -17,7 +17,7 @@ class ColdCacheThumbnailTest(TestCase):
     mp = 'lazythumbs.views.%s'
 
     def setUp(self):
-        self.tn = lambda: thumbnail(Mock(), 'img/path', 48, 48)
+        self.tn = lambda: thumbnail(Mock(), 48, 48, 'image/path')
 
     def test_img_not_found(self):
         """
@@ -63,7 +63,7 @@ class WarmCacheThumbnailTest(TestCase):
     """
     mp = 'lazythumbs.views.%s'
     def setUp(self):
-        self.tn = lambda: thumbnail(Mock(), 'image/path', 48, 48)
+        self.tn = lambda: thumbnail(Mock(), 48, 48, 'image/path')
 
     def mc_factory(self, thumbnail_path, was_404):
         """
