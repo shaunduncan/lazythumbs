@@ -10,7 +10,7 @@ from sorl.thumbnail.base import ThumbnailBackend
 from sorl.thumbnail.images import ImageFile
 from sorl.thumbnail.parsers import parse_geometry
 
-def thumbnail(request, img_path, width, height):
+def thumbnail(request, width, height, img_path):
     """
     Generate a thumbnail from img_path using the supplied width and height.
     a request for upscaling will generate a "thumbnail" but just leave the
@@ -80,7 +80,7 @@ def default_thumbnail(request, img_path):
     """
     width = settings.THUMBNAIL_DEFAULT_WIDTH
     height = settings.THUMBNAIL_DEFAULT_HEIGHT
-    return thumbnail(request, img_path, width, height)
+    return thumbnail(request, width, height, img_path)
 
 def img_cache_key(img_path, width, height, action):
     """
