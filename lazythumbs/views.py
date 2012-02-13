@@ -10,6 +10,9 @@ from sorl.thumbnail.base import ThumbnailBackend
 from sorl.thumbnail.images import ImageFile
 from sorl.thumbnail.parsers import parse_geometry
 
+# TODO
+# bug: generate_thumbnail shouldn't always write to the l
+
 def thumbnail(request, width, height, img_path):
     """
     Generate a thumbnail from img_path using the supplied width and height.
