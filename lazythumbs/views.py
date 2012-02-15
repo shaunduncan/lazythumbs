@@ -1,5 +1,6 @@
 from hashlib import md5
 import json
+import logging
 import os
 import re
 import types
@@ -12,6 +13,8 @@ from django.core.exceptions import SuspiciousOperation
 from django.http import HttpResponse
 from django.views.generic.base import View
 from PIL import ImageOps, Image
+
+logger = logging.getLogger(__name__)
 
 class LazyThumbRenderer(View):
     """
@@ -38,11 +41,19 @@ class LazyThumbRenderer(View):
         Builds internal list of allowed actions (methods denoted with
         @action)
         """
-        return [
-            a for a in dir(self)
-            if (lambda x: type(x) == types.MethodType
-                and getattr(x, 'is_action', False))(getattr(self, a))
-        ]
+        actions = []
+        for a in (x for x in dir(self) if x != '_allowed_actions'):
+            try:
+                attr = getattr(self, a)
+            except AttributeError:
+                continue
+            if type(attr) != types.MethodType:
+                continue
+
+            if getattr(attr, 'is_action', False):
+                actions.append(a)
+
+        return actions
 
     def get(self, request, action, geometry, source_path):
         """
@@ -56,21 +67,25 @@ class LazyThumbRenderer(View):
         :param source_path: the fs path to the image to be manipulated
         :returns: an HttpResponse with an image/jpeg content_type
         """
-        source_path = os.path.join(settings.THUMBNAIL_SOURCE_PATH, source_path)
 
         # reject naughty paths and actions
         if source_path.startswith('/'):
+            logger.info("%s: blocked bad path" % source_path)
             return self.four_oh_four()
         if re.match('\.\./', source_path):
+            logger.info("%s: blocked bad path" % source_path)
             return self.four_oh_four()
-        if action not in self.allowed_actions:
+        if action not in self._allowed_actions:
+            logger.info("%s: bad action requested: %s" % (source_path, action))
             return self.four_oh_four()
 
+        source_path = os.path.join(settings.THUMBNAIL_SOURCE_PATH, source_path)
+
         try:
-            w,h = geometry.split('x')
+            width,height = geometry.split('x')
         except ValueError:
-            w = geometry
-            h = None
+            width = geometry
+            height = None
 
         cache_key = self.cache_key(source_path, action, width, height)
         source_meta = cache.get(cache_key)
@@ -85,18 +100,22 @@ class LazyThumbRenderer(View):
                 f = self.fs.open(rendered_path)
                 raw_data = f.read()
             except IOError:
+                logger.info("%s: thumbnail missing from filesystem, will regenerate" % source_path)
                 _, raw_data = self.render_and_save(source_path, width, height)
-            except SuspiciousOperation:
+            except SuspiciousOperation, e:
+                logger.warning("%s: suspicious operation encountered: %s" % (source_path, e))
                 return self.four_oh_four()
             finally:
                 return self.two_hundred(raw_data)
 
+        logger.info("%s: cache miss" % source_path)
         if self.fs.exists(source_path):
             rendered_path, raw_data = self.render_and_save(source_path, width, height)
             response = self.two_hundred(raw_data)
             source_meta = dict(rendered_path=rendered_path, was_404=False)
             expires = settings.LAZYTHUMB_CACHE_TIMEOUT
         else:
+            logger.info("%s: not found on filesystem")
             response = self.four_hundred()
             source_meta = dict(rendered_path='', was_404=True)
             expires = settings.LAZYTHUMB_404_CACHE_TIMEOUT
