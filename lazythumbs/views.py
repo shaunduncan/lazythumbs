@@ -27,6 +27,12 @@ class LazyThumbRenderer(View):
     methods that return raw image data as a string.
     """
     fs = FileSystemStorage()
+    def __init__(self):
+        self._allowed_actions = [a for a in dir(self)
+            if (lambda x: type(x) == types.MethodType
+                and getattr(x, 'is_action', False))(getattr(self, a, None))
+        ]
+
     def action(fun):
         """
         Decorator used to denote an instance method as an action: a function
@@ -35,17 +41,6 @@ class LazyThumbRenderer(View):
         """
         fun.is_action = True
         return fun
-
-    @property
-    def _allowed_actions(self):
-        """
-        Builds internal list of allowed actions (methods denoted with
-        @action)
-        """
-        return [a for a in (a for a in dir(self) if a != '_allowed_actions')
-            if (lambda x: type(x) == types.MethodType
-                and getattr(x, 'is_action', False))(getattr(self, a, None))
-        ]
 
     def get(self, request, action, geometry, source_path):
         """
