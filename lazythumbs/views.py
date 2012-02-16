@@ -42,19 +42,10 @@ class LazyThumbRenderer(View):
         Builds internal list of allowed actions (methods denoted with
         @action)
         """
-        actions = []
-        for a in (x for x in dir(self) if x != '_allowed_actions'):
-            try:
-                attr = getattr(self, a)
-            except AttributeError:
-                continue
-            if type(attr) != types.MethodType:
-                continue
-
-            if getattr(attr, 'is_action', False):
-                actions.append(a)
-
-        return actions
+        return [a for a in (a for a in dir(self) if a != '_allowed_actions')
+            if (lambda x: type(x) == types.MethodType
+                and getattr(x, 'is_action', False))(getattr(self, a, None))
+        ]
 
     def get(self, request, action, geometry, source_path):
         """
@@ -138,12 +129,10 @@ class LazyThumbRenderer(View):
         action_hash = self.hash_(img_path, action, width, height)
         rendered_path = '%s/%s/%s/%s' % (settings.LAZYTHUMBS_PREFIX, action_hash[0:2], action_hash[2:4], action_hash)
         img = getattr(self, action)(img_path, width, height)
-        ####
-        #ImageFile.MAXBLOCK = 1024 * 1024
+        # this code from sorl-thumbnail
         buf = StringIO()
         params = {
             'format': 'JPEG',
-            #'quality': quality,
             'optimize': 1,
             'progressive': True
         }
@@ -154,7 +143,7 @@ class LazyThumbRenderer(View):
             img.save(buf, **params)
         raw_data = buf.getvalue()
         buf.close()
-        ######
+
         self.fs.save(os.path.join(settings.LAZYTHUMBS_SOURCE_PATH, rendered_path), ContentFile(raw_data))
 
         return rendered_path, raw_data
@@ -216,7 +205,7 @@ class LazyThumbRenderer(View):
         :param width: width in pixels of desired thumbnail
         :param height: height in pixels of desired thumbnail (optional)
 
-        :returns: raw image data as a string
+        :returns: PIL.Image
         """
         img = Image.open(img_path)
         do_crop = False
@@ -234,7 +223,6 @@ class LazyThumbRenderer(View):
         if do_crop:
             img = img.crop((0,0, width, width))
 
-        #return img.tostring()
         return img
 
     @action
@@ -246,7 +234,7 @@ class LazyThumbRenderer(View):
         :param width: width in pixels of new image
         :param height: height in pixels of  new image
 
-        :returns: raw image data as a string
+        :returns: PIL.Image
         """
         img = Image.open(img)
-        return img.resize((width, height), Image.ANTIALIAS).tostring()
+        return img.resize((width, height), Image.ANTIALIAS)
