@@ -42,6 +42,52 @@ class LazyThumbRenderer(View):
         fun.is_action = True
         return fun
 
+    @action
+    def thumbnail(self, img_path, width, height=None):
+        """
+        Scale in one or two dimensions and then perform a left crop (if only
+        one dimension was specified).
+
+        :param img_path: path to an image to be thumbnailed
+        :param width: width in pixels of desired thumbnail
+        :param height: height in pixels of desired thumbnail (optional)
+
+        :returns: PIL.Image
+        """
+        img = Image.open(img_path)
+        do_crop = False
+        if height is None:
+            do_crop = True
+            height = int(img.size[1] * (float(width) / img.size[0]))
+
+        # prevent upscaling
+        width = min(width, img.size[1])
+        height = min(height, img.size[0])
+
+        img = img.resize((width, height), Image.ANTIALIAS)
+
+        if do_crop:
+            img = img.crop((0,0, width, width))
+
+        return img
+
+    @action
+    def resize(self, img_path, width, height):
+        """
+        resize to given dimenions.
+
+        :param img_path: path to an image to be resizeed
+        :param width: width in pixels of new image
+        :param height: height in pixels of  new image
+
+        :returns: PIL.Image
+        """
+        img = Image.open(img_path)
+        # prevent upscaling
+        width = min(width, img.size[1])
+        height = min(height, img.size[0])
+        return img.resize((width, height), Image.ANTIALIAS)
+
     def get(self, request, action, geometry, source_path):
         """
         Perform action routing and handle sanitizing url input. Handles caching the path to a rendered image to
@@ -189,47 +235,3 @@ class LazyThumbRenderer(View):
         resp = HttpResponse(status=404, content_type='image/jpeg')
         resp['Cache-Control'] = 'public,max-age=%s' % settings.LAZYTHUMBS_404_CACHE_TIMEOUT
         return resp
-
-    @action
-    def thumbnail(self, img_path, width, height=None):
-        """
-        Scale in one or two dimensions and then perform a left crop (if only
-        one dimension was specified).
-
-        :param img_path: path to an image to be thumbnailed
-        :param width: width in pixels of desired thumbnail
-        :param height: height in pixels of desired thumbnail (optional)
-
-        :returns: PIL.Image
-        """
-        img = Image.open(img_path)
-        do_crop = False
-        if height is None:
-            do_crop = True
-            height = int(img.size[1] * (float(width) / img.size[0]))
-
-        width = min(width, img.size[1])
-        height = min(height, img.size[0])
-
-        print "%s x %s" % (width, height)
-
-        img = img.resize((width, height), Image.ANTIALIAS)
-
-        if do_crop:
-            img = img.crop((0,0, width, width))
-
-        return img
-
-    @action
-    def resize(self, img_path, width, height):
-        """
-        resize to given dimenions.
-
-        :param img_path: path to an image to be resizeed
-        :param width: width in pixels of new image
-        :param height: height in pixels of  new image
-
-        :returns: PIL.Image
-        """
-        img = Image.open(img)
-        return img.resize((width, height), Image.ANTIALIAS)
