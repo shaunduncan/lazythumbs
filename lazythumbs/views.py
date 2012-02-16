@@ -26,8 +26,8 @@ class LazyThumbRenderer(View):
     image transformations simply by subclassing this view and adding "action_"
     methods that return raw image data as a string.
     """
-    fs = FileSystemStorage()
     def __init__(self):
+        self.fs = FileSystemStorage()
         self._allowed_actions = [a.__name__
             for a in (getattr(self, a, None) for a in dir(self))
             if type(a) == types.MethodType and getattr(a, 'is_action', False)
@@ -128,15 +128,18 @@ class LazyThumbRenderer(View):
         if source_meta:
             source_meta = json.loads(source_meta)
             was_404 = source_meta['was_404']
+
+            if was_404:
+                return self.four_oh_four()
+
             rendered_path = source_meta['rendered_path']
             rendered_path = os.path.join(settings.LAZYTHUMBS_SOURCE_PATH, rendered_path)
-
             try:
                 f = self.fs.open(rendered_path)
                 raw_data = f.read()
             except IOError:
                 logger.info("%s: thumbnail missing from filesystem, will regenerate" % source_path)
-                _, raw_data = self.render_and_save(action, source_path, width, height)
+                _, raw_data = self._render_and_save(action, source_path, width, height)
             except SuspiciousOperation, e:
                 logger.warning("%s: suspicious operation encountered: %s" % (source_path, e))
                 return self.four_oh_four()
@@ -145,13 +148,13 @@ class LazyThumbRenderer(View):
 
         logger.info("%s: cache miss" % source_path)
         if self.fs.exists(source_path):
-            rendered_path, raw_data = self.render_and_save(action, source_path, width, height)
+            rendered_path, raw_data = self._render_and_save(action, source_path, width, height)
             response = self.two_hundred(raw_data)
             source_meta = dict(rendered_path=rendered_path, was_404=False)
             expires = settings.LAZYTHUMBS_CACHE_TIMEOUT
         else:
             logger.info("%s: not found on filesystem")
-            response = self.four_hundred()
+            response = self.four_oh_four()
             source_meta = dict(rendered_path='', was_404=True)
             expires = settings.LAZYTHUMBS_404_CACHE_TIMEOUT
 
@@ -159,7 +162,7 @@ class LazyThumbRenderer(View):
 
         return response
 
-    def render_and_save(self, action, img_path, width, height):
+    def _render_and_save(self, action, img_path, width, height):
         """
         Defers to action_ methods to actually manipulate an image. Saves the
         resulting image to the filesystem.
