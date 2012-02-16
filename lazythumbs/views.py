@@ -1,3 +1,4 @@
+from cStringIO import StringIO
 from hashlib import md5
 import json
 import logging
@@ -79,29 +80,31 @@ class LazyThumbRenderer(View):
             logger.info("%s: bad action requested: %s" % (source_path, action))
             return self.four_oh_four()
 
-        source_path = os.path.join(settings.THUMBNAIL_SOURCE_PATH, source_path)
+        source_path = os.path.join(settings.LAZYTHUMBS_SOURCE_PATH, source_path)
 
         try:
             width,height = geometry.split('x')
+            width = int(width)
+            height = int(height)
         except ValueError:
-            width = geometry
+            width = int(geometry)
             height = None
 
         cache_key = self.cache_key(source_path, action, width, height)
         source_meta = cache.get(cache_key)
 
         if source_meta:
-            source_meta = json.loads(img_meta)
+            source_meta = json.loads(source_meta)
             was_404 = source_meta['was_404']
             rendered_path = source_meta['rendered_path']
-            rendered_path = os.path.join(settings.LAZYTHUMB_SOURCE_PATH, rendered_path)
+            rendered_path = os.path.join(settings.LAZYTHUMBS_SOURCE_PATH, rendered_path)
 
             try:
                 f = self.fs.open(rendered_path)
                 raw_data = f.read()
             except IOError:
                 logger.info("%s: thumbnail missing from filesystem, will regenerate" % source_path)
-                _, raw_data = self.render_and_save(source_path, width, height)
+                _, raw_data = self.render_and_save(action, source_path, width, height)
             except SuspiciousOperation, e:
                 logger.warning("%s: suspicious operation encountered: %s" % (source_path, e))
                 return self.four_oh_four()
@@ -110,21 +113,21 @@ class LazyThumbRenderer(View):
 
         logger.info("%s: cache miss" % source_path)
         if self.fs.exists(source_path):
-            rendered_path, raw_data = self.render_and_save(source_path, width, height)
+            rendered_path, raw_data = self.render_and_save(action, source_path, width, height)
             response = self.two_hundred(raw_data)
             source_meta = dict(rendered_path=rendered_path, was_404=False)
-            expires = settings.LAZYTHUMB_CACHE_TIMEOUT
+            expires = settings.LAZYTHUMBS_CACHE_TIMEOUT
         else:
             logger.info("%s: not found on filesystem")
             response = self.four_hundred()
             source_meta = dict(rendered_path='', was_404=True)
-            expires = settings.LAZYTHUMB_404_CACHE_TIMEOUT
+            expires = settings.LAZYTHUMBS_404_CACHE_TIMEOUT
 
         cache.set(cache_key, json.dumps(source_meta), expires)
 
         return response
 
-    def render_and_save(self, img_path, width, height):
+    def render_and_save(self, action, img_path, width, height):
         """
         Defers to action_ methods to actually manipulate an image. Saves the
         resulting image to the filesystem.
@@ -133,9 +136,26 @@ class LazyThumbRenderer(View):
         :returns raw_data: raw data of new image as string
         """
         action_hash = self.hash_(img_path, action, width, height)
-        rendered_path = '%s/%s/%s' % (action_hash[0:2], action_hash[2:4], action_hash)
-        raw_data = getattr(self, action)(img_path, width, height)
-        self.fs.save(rendered_path, ContentFile(raw_data))
+        rendered_path = '%s/%s/%s/%s' % (settings.LAZYTHUMBS_PREFIX, action_hash[0:2], action_hash[2:4], action_hash)
+        img = getattr(self, action)(img_path, width, height)
+        ####
+        #ImageFile.MAXBLOCK = 1024 * 1024
+        buf = StringIO()
+        params = {
+            'format': 'JPEG',
+            #'quality': quality,
+            'optimize': 1,
+            'progressive': True
+        }
+        try:
+            img.save(buf, **params)
+        except IOError:
+            params.pop('optimize')
+            img.save(buf, **params)
+        raw_data = buf.getvalue()
+        buf.close()
+        ######
+        self.fs.save(os.path.join(settings.LAZYTHUMBS_SOURCE_PATH, rendered_path), ContentFile(raw_data))
 
         return rendered_path, raw_data
 
@@ -162,10 +182,10 @@ class LazyThumbRenderer(View):
         :param width: integer width in pixels
         :param height: integer height in pixels
         """
-        hashed = md5('%s:%s:%s:%s' % img_path, action, width, height)
+        hashed = md5('%s:%s:%s:%s' % (img_path, action, width, height))
         return hashed.hexdigest()
 
-    def two_hundered(img_data):
+    def two_hundred(self, img_data):
         """
         Generate a 200 image response with raw image data, Cache-Control set,
         and an image/jpeg content-type.
@@ -173,7 +193,7 @@ class LazyThumbRenderer(View):
         :param img_data: raw image data as a string
         """
         resp = HttpResponse(img_data, content_type='image/jpeg')
-        resp['Cache-Control'] = 'public,max-age=%s' % settings.THUMBNAIL_CACHE_TIMEOUT
+        resp['Cache-Control'] = 'public,max-age=%s' % settings.LAZYTHUMBS_CACHE_TIMEOUT
         return resp
 
     def four_oh_four(self):
@@ -183,7 +203,7 @@ class LazyThumbRenderer(View):
         since it's a 4xx.
         """
         resp = HttpResponse(status=404, content_type='image/jpeg')
-        resp['Cache-Control'] = 'public,max-age=%s' % settings.THUMBNAIL_404_CACHE_TIMEOUT
+        resp['Cache-Control'] = 'public,max-age=%s' % settings.LAZYTHUMBS_404_CACHE_TIMEOUT
         return resp
 
     @action
@@ -198,20 +218,24 @@ class LazyThumbRenderer(View):
 
         :returns: raw image data as a string
         """
-        img = Image.open(img)
+        img = Image.open(img_path)
         do_crop = False
         if height is None:
             do_crop = True
             height = int(img.size[1] * (float(width) / img.size[0]))
+
         width = min(width, img.size[1])
         height = min(height, img.size[0])
+
+        print "%s x %s" % (width, height)
 
         img = img.resize((width, height), Image.ANTIALIAS)
 
         if do_crop:
             img = img.crop((0,0, width, width))
 
-        return img.tostring()
+        #return img.tostring()
+        return img
 
     @action
     def resize(self, img_path, width, height):
