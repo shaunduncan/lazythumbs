@@ -4,7 +4,7 @@ from unittest import TestCase
 from django import template
 from mock import Mock, patch
 
-from lazythumbs.views import LazyThumbRenderer
+from lazythumbs.views import LazyThumbRenderer, action
 from lazythumbs.templatetags.lazythumb import lazythumb, LazyThumbNode
 
 class MockCache(object):
@@ -15,8 +15,32 @@ class MockCache(object):
     def get(self, key, default=None):
         return self.cache.get(key)
 
-class ViewTest(TestCase):
-    """ Test behavior of renderer given a completely cold cache """
+class RenderTest(TestCase):
+    """ test image rendering process """
+
+    def test_action_decorator(self):
+        class MyRenderer(LazyThumbRenderer):
+            @action
+            def myaction(self):
+                pass
+
+        renderer = MyRenderer()
+        self.assertTrue('myaction' in renderer._allowed_actions)
+
+    def test_render_and_save(self):
+        """ """
+        pass
+
+    def test_thumbnail(self):
+        """ """
+        pass
+
+    def test_resize(self):
+        """ """
+        pass
+
+class GetViewTest(TestCase):
+    """ Test behavior of LazyThumbRenderer.get """
 
     def mc_factory(self, rendered_path, was_404):
         """
