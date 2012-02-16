@@ -28,9 +28,9 @@ class LazyThumbRenderer(View):
     """
     fs = FileSystemStorage()
     def __init__(self):
-        self._allowed_actions = [a for a in dir(self)
-            if (lambda x: type(x) == types.MethodType
-                and getattr(x, 'is_action', False))(getattr(self, a, None))
+        self._allowed_actions = [a.__name__
+            for a in (getattr(self, a, None) for a in dir(self))
+            if type(a) == types.MethodType and getattr(a, 'is_action', False)
         ]
 
     def action(fun):
