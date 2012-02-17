@@ -25,12 +25,11 @@ def lazythumb(parser, token):
     elif not re.match('^\d+x\d+', geometry):
         raise template.TemplateSyntaxError('geometry must be a single number or dimensions in the form widthxheight')
 
-    # since we only support one action, don't bother passing action. this can
-    # be refactored as necessary.
-    return LazyThumbNode(url, geometry)
+    return LazyThumbNode(action, url, geometry)
 
 class LazyThumbNode(template.Node):
-    def __init__(self, url_var, geometry):
+    def __init__(self, action, url_var, geometry):
+        self.action = action
         self.url_var = template.Variable(url_var)
         self.geometry = geometry
 
@@ -41,9 +40,9 @@ class LazyThumbNode(template.Node):
         :raises template.VariableDoesNotExist: if given url variable not found
         """
         url = self.url_var.resolve(context)
-        width, height = self.geometry.split('x')
 
-        img_src = '/lt/thumb/%s/%s/%s/' % (width, height, url)
+        img_src = '/lt/%s/%s/%s/' % (self.action, self.geometry, url)
+        width, height = self.geometry.split('x')
         img_tag = '<img src="%s" width="%s" height="%s" />' % (img_src, width, height)
 
         return img_tag

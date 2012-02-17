@@ -284,11 +284,11 @@ class TemplateTagTest(TestCase):
         self.assertEqual(node.url_var.var, 'url')
 
     def test_render_success(self):
-        node = LazyThumbNode('url', '100x200')
+        node = LazyThumbNode('thumbnail', 'url', '100x200')
         tag_str = node.render({'url':'resolved_url'})
         self.assertEqual(tag_str,
-            '<img src="/lt/thumb/100/200/resolved_url/" width="100" height="200" />')
+            '<img src="/lt/thumbnail/100x200/resolved_url/" width="100" height="200" />')
 
     def test_render_no_url(self):
-        node = LazyThumbNode('url', '100x200')
+        node = LazyThumbNode('thumbnail', 'url', '100x200')
         self.assertRaises(template.VariableDoesNotExist, node.render, (node, {}))
