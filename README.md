@@ -1,6 +1,6 @@
 # lazythumbs
 
-### render-on-request thumbnails for django, powered by sorl-thumbnail
+### render-on-request thumbnails for django
 
 ## usage
 
