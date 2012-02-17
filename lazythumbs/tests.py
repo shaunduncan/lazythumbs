@@ -1,4 +1,5 @@
 import json
+import re
 from unittest import TestCase
 
 from django import template
@@ -15,6 +16,19 @@ class MockCache(object):
     def get(self, key, default=None):
         return self.cache.get(key)
 
+class MockImg(object):
+    def __init__(self):
+        self.called = []
+        self.size = (100, 100)
+    def resize(self, size, _):
+        self.called.append('resize')
+        self.size = size
+        return self
+    def crop(self, dimensions):
+        self.called.append('crop')
+        return self
+
+
 class RenderTest(TestCase):
     """ test image rendering process """
 
@@ -29,15 +43,87 @@ class RenderTest(TestCase):
 
     def test_render_and_save(self):
         """ """
-        pass
+        class TestRenderer(LazyThumbRenderer):
+            mock_img = Mock()
+            @action
+            def testaction(self, *args, **kwargs):
+                return self.mock_img
 
-    def test_thumbnail(self):
+        renderer = TestRenderer()
+        renderer.fs.save = Mock()
+
+        path, data = renderer._render_and_save('testaction', 'i/p', 1, 1)
+
+        self.assertTrue(re.match('\w+/\w+/\w+/\w+', path))
+        self.assertTrue(TestRenderer.mock_img.save.called)
+
+    def test_thumbnail_no_height(self):
         """ """
-        pass
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg()
+        mock_Image = Mock()
+        mock_Image.open = Mock(return_value=mock_img)
+        with patch('lazythumbs.views.Image', mock_Image):
+            img = renderer.thumbnail('i/p', 48)
+        self.assertEqual(img.size[0], 48)
+        self.assertEqual(len(mock_img.called), 2)
+        self.assertTrue('resize' in mock_img.called)
+        self.assertTrue('crop' in mock_img.called)
+
+    def test_thumbnail_with_height(self):
+        """ """
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg()
+        mock_Image = Mock()
+        mock_Image.open = Mock(return_value=mock_img)
+        with patch('lazythumbs.views.Image', mock_Image):
+            img = renderer.thumbnail('i/p', 48, 50)
+        self.assertEqual(img.size[0], 48)
+        self.assertEqual(img.size[1], 50)
+        self.assertEqual(len(mock_img.called), 1)
+        self.assertTrue('resize' in mock_img.called)
+
+    def test_thumbnail_no_upscaling(self):
+        """ """
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg()
+        mock_Image = Mock()
+        mock_Image.open = Mock(return_value=mock_img)
+        with patch('lazythumbs.views.Image', mock_Image):
+            img = renderer.thumbnail('i/p', 200, 200)
+
+        self.assertEqual(img.size[0], 100)
+        self.assertEqual(img.size[1], 100)
+        self.assertEqual(len(mock_img.called), 1)
+        self.assertTrue('resize' in mock_img.called)
+
 
     def test_resize(self):
         """ """
-        pass
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg()
+        mock_Image = Mock()
+        mock_Image.open = Mock(return_value=mock_img)
+        with patch('lazythumbs.views.Image', mock_Image):
+            img = renderer.resize('i/p', 48, 50)
+        self.assertEqual(img.size[0], 48)
+        self.assertEqual(img.size[1], 50)
+        self.assertEqual(len(mock_img.called), 1)
+        self.assertTrue('resize' in mock_img.called)
+
+    def test_resize_no_upscaling(self):
+        """ """
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg()
+        mock_Image = Mock()
+        mock_Image.open = Mock(return_value=mock_img)
+        with patch('lazythumbs.views.Image', mock_Image):
+            img = renderer.resize('i/p', 200, 200)
+
+        self.assertEqual(img.size[0], 100)
+        self.assertEqual(img.size[1], 100)
+        self.assertEqual(len(mock_img.called), 1)
+        self.assertTrue('resize' in mock_img.called)
 
 class GetViewTest(TestCase):
     """ Test behavior of LazyThumbRenderer.get """
