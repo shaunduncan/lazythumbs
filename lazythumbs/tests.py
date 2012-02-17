@@ -33,6 +33,10 @@ class RenderTest(TestCase):
     """ test image rendering process """
 
     def test_action_decorator(self):
+        """
+        Ensure the decorator causes an action to show up in
+        _allowed_actions
+        """
         class MyRenderer(LazyThumbRenderer):
             @action
             def myaction(self):
@@ -42,7 +46,9 @@ class RenderTest(TestCase):
         self.assertTrue('myaction' in renderer._allowed_actions)
 
     def test_render_and_save(self):
-        """ """
+        """
+        Make sure the StringIO operations don't explode
+        """
         class TestRenderer(LazyThumbRenderer):
             mock_img = Mock()
             @action
@@ -58,7 +64,9 @@ class RenderTest(TestCase):
         self.assertTrue(TestRenderer.mock_img.save.called)
 
     def test_thumbnail_no_height(self):
-        """ """
+        """
+        Test behavior of thumbnail action when no height is provided
+        """
         renderer = LazyThumbRenderer()
         mock_img = MockImg()
         mock_Image = Mock()
@@ -71,7 +79,10 @@ class RenderTest(TestCase):
         self.assertTrue('crop' in mock_img.called)
 
     def test_thumbnail_with_height(self):
-        """ """
+        """
+        Test behavior of thumbnail action when both width and height are
+        provided.
+        """
         renderer = LazyThumbRenderer()
         mock_img = MockImg()
         mock_Image = Mock()
@@ -84,7 +95,9 @@ class RenderTest(TestCase):
         self.assertTrue('resize' in mock_img.called)
 
     def test_thumbnail_no_upscaling(self):
-        """ """
+        """
+        Ensure that upscaling is forbidden in thumbnail action.
+        """
         renderer = LazyThumbRenderer()
         mock_img = MockImg()
         mock_Image = Mock()
@@ -99,7 +112,9 @@ class RenderTest(TestCase):
 
 
     def test_resize(self):
-        """ """
+        """
+        Test behavior of resize action.
+        """
         renderer = LazyThumbRenderer()
         mock_img = MockImg()
         mock_Image = Mock()
@@ -112,7 +127,9 @@ class RenderTest(TestCase):
         self.assertTrue('resize' in mock_img.called)
 
     def test_resize_no_upscaling(self):
-        """ """
+        """
+        Ensure upscaling is forbidden in resize action.
+        """
         renderer = LazyThumbRenderer()
         mock_img = MockImg()
         mock_Image = Mock()
