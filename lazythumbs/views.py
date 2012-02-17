@@ -171,7 +171,7 @@ class LazyThumbRenderer(View):
         :returns raw_data: raw data of new image as string
         """
         action_hash = self.hash_(img_path, action, width, height)
-        rendered_path = '%s/%s/%s/%s' % (settings.LAZYTHUMBS_PREFIX, action_hash[0:2], action_hash[2:4], action_hash)
+        rendered_path = '%s%s/%s/%s' % (settings.LAZYTHUMBS_PREFIX, action_hash[0:2], action_hash[2:4], action_hash)
         img = getattr(self, action)(img_path, width, height)
         # this code from sorl-thumbnail
         buf = StringIO()
