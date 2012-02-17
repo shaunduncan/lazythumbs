@@ -17,6 +17,16 @@ from PIL import ImageOps, Image
 
 logger = logging.getLogger(__name__)
 
+def action(fun):
+    """
+    Decorator used to denote an instance method as an action: a function
+    that takes a path to an image, performs PIL on it, and returns raw imag
+    data.
+    """
+    fun.is_action = True
+    return fun
+
+
 class LazyThumbRenderer(View):
     """
     Perform requested image render operations and handle fs logic and caching
@@ -32,15 +42,6 @@ class LazyThumbRenderer(View):
             for a in (getattr(self, a, None) for a in dir(self))
             if type(a) == types.MethodType and getattr(a, 'is_action', False)
         ]
-
-    def action(fun):
-        """
-        Decorator used to denote an instance method as an action: a function
-        that takes a path to an image, performs PIL on it, and returns raw imag
-        data.
-        """
-        fun.is_action = True
-        return fun
 
     @action
     def thumbnail(self, img_path, width, height=None):
