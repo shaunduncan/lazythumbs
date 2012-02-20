@@ -42,7 +42,7 @@ def lazythumb(parser, token):
     return LazyThumbNode(action, url, geometry)
 
 class LazyThumbNode(template.Node):
-    def __init__(self, action, url_var, geometry):
+    def __init__(self, action, url, geometry):
         self.action = action
         self.url = url
         self.geometry = geometry
