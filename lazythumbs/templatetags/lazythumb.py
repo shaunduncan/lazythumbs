@@ -5,6 +5,7 @@
 import re
 
 from django import template
+from django.conf import settings
 
 register = template.Library()
 
@@ -12,18 +13,25 @@ SUPPORTED_ACTIONS = ['thumbnail', 'resize']
 
 @register.tag
 def lazythumb(parser, token):
+    tag = token.contents.split()[0]
     try:
         tag, url, action, geometry = token.contents.split()
     except ValueError:
-        raise template.TemplateSyntaxError('%s requires exactly 3 arguments' % token.contents.split()[0])
+        raise template.TemplateSyntaxError('%s requires exactly 3 arguments' % tag)
+
+
+    if not re.match('^[\'"].+[\'"]$', geometry):
+        raise template.TemplateSyntaxError('%s expected string literal for gemoetry' % tag)
+
+    geometry = re.sub('[\'"]', '', geometry)
 
     if not action in SUPPORTED_ACTIONS:
-        raise template.TemplateSyntaxError('action argument must be one of %s', SUPPORTED_ACTIONS)
+        raise template.TemplateSyntaxError('%s expects action argument to be one of %s' % (tag, SUPPORTED_ACTIONS))
 
     if re.match('^\d+$', geometry):
         geometry = '%sx%s' % (geometry, geometry)
     elif not re.match('^\d+x\d+', geometry):
-        raise template.TemplateSyntaxError('geometry must be a single number or dimensions in the form widthxheight')
+        raise template.TemplateSyntaxError('%s expects geometry as a single number or dimensions in the form widthxheight' % tag)
 
     return LazyThumbNode(action, url, geometry)
 
@@ -41,7 +49,7 @@ class LazyThumbNode(template.Node):
         """
         url = self.url_var.resolve(context)
 
-        img_src = '/lt/%s/%s/%s/' % (self.action, self.geometry, url)
+        img_src = '%s/lt/%s/%s/%s/' % (settings.LAZYTHUMBS_URL, self.action, self.geometry, url)
         width, height = self.geometry.split('x')
         img_tag = '<img src="%s" width="%s" height="%s" />' % (img_src, width, height)
 
