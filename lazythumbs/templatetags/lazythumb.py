@@ -11,7 +11,7 @@ register = template.Library()
 
 SUPPORTED_ACTIONS = ['thumbnail', 'resize']
 
-@register.tag
+@register.tag(name="lazythumb")
 def lazythumb(parser, token):
     tag = token.contents.split()[0]
     try:
