@@ -19,26 +19,32 @@ def lazythumb(parser, token):
     except ValueError:
         raise template.TemplateSyntaxError('%s requires exactly 3 arguments' % tag)
 
-
-    if not re.match('^[\'"].+[\'"]$', geometry):
-        raise template.TemplateSyntaxError('%s expected string literal for gemoetry' % tag)
-
-    geometry = re.sub('[\'"]', '', geometry)
-
     if not action in SUPPORTED_ACTIONS:
         raise template.TemplateSyntaxError('%s expects action argument to be one of %s' % (tag, SUPPORTED_ACTIONS))
 
-    if re.match('^\d+$', geometry):
-        geometry = '%sx%s' % (geometry, geometry)
-    elif not re.match('^\d+x\d+', geometry):
-        raise template.TemplateSyntaxError('%s expects geometry as a single number or dimensions in the form widthxheight' % tag)
+    literal_re = '^[\'"].+[\'"]$'
+    strip_quotes = lambda s: re.sub('[\'"]', '', geometry)
+
+    if re.match(literal_re, geometry):
+        geometry = strip_quotes(geometry)
+        if re.match('^\d+$', geometry):
+            geometry = '%sx%s' % (geometry, geometry)
+        elif not re.match('^\d+x\d+', geometry):
+            raise template.TemplateSyntaxError('%s expects geometry as a single number or dimensions in the form widthxheight' % tag)
+    else:
+        geometry = template.Variable(geometry)
+
+    if re.match(literal_re, url):
+        url = strip_quotes(url)
+    else:
+        url = template.Variable(url)
 
     return LazyThumbNode(action, url, geometry)
 
 class LazyThumbNode(template.Node):
     def __init__(self, action, url_var, geometry):
         self.action = action
-        self.url_var = template.Variable(url_var)
+        self.url = url
         self.geometry = geometry
 
     def render(self, context):
@@ -47,9 +53,13 @@ class LazyThumbNode(template.Node):
 
         :raises template.VariableDoesNotExist: if given url variable not found
         """
-        url = self.url_var.resolve(context)
+        if type(self.geometry) == template.Variable:
+            self.geometry = self.geometry.resolve(context)
 
-        img_src = '%s/lt/%s/%s/%s/' % (settings.LAZYTHUMBS_URL, self.action, self.geometry, url)
+        if type(self.url) == template.Variable:
+            self.url = self.url.resolve(context)
+
+        img_src = '%s/lt/%s/%s/%s/' % (settings.LAZYTHUMBS_URL, self.action, self.geometry, self.url)
         width, height = self.geometry.split('x')
         img_tag = '<img src="%s" width="%s" height="%s" />' % (img_src, width, height)
 
