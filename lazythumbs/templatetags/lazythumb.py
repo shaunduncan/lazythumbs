@@ -28,7 +28,7 @@ def quack(thing, properties, levels=[]):
         if prop is not None:
             return getattr(t, prop)
 
-register.tag('lazythmb', lambda p,t: LazythumbNode(p,t))
+register.tag('lazythumb', lambda p,t: LazythumbNode(p,t))
 class LazythumbNode(Node):
     usage = 'Expected invocation is {% url|ImageFile|Object action geometry as variable %}'
     def __init__(self, parser, token):
