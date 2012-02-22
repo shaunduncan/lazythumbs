@@ -1,6 +1,10 @@
 """
-    {% lazythumb image.url thumbnail 48 %}
-    {% lazythumb image.url resize 150x200 %}
+    {% lazythumb image.url thumbnail '48' as img_tag%}
+        <img src="{{img_tag.src}}" width="{{img_tag.width}}" height="{{img_tag.height}} />
+    {% endlazythumb %}
+    {% lazythumb image.url resize '150x200' %}
+        <img src="{{img_tag.src}}" width="{{img_tag.width}}" height="{{img_tag.height}} />
+    {% endlazythumb %}
 """
 from functools import partial
 from itertools import chain
