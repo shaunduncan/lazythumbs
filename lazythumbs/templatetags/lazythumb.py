@@ -9,6 +9,11 @@ from django.template import TemplateSyntaxError, Variable
 from django.conf import settings
 from django.core.files.images import ImageFile
 
+import lazythumbs
+import pdb; pdb.set_trace()
+print lazythumbs.util.scale_h_to_w
+from lazythumbs.util import scale_h_to_w
+
 register = template.Library()
 
 SUPPORTED_ACTIONS = ['thumbnail', 'resize']
@@ -27,7 +32,7 @@ def quack(thing, properties, levels=[]):
 class LazythumbNode(template.Node):
     usage = 'Expected invocation is {% url|ImageFile|Object action geometry as variable %}'
     def __init__(self, parser, token):
-        bits = token.split_contents()
+        bits = token.contents.split()
         try:
            _, thing, action, geometry, _, as_var = bits
         except ValueError:
@@ -51,16 +56,13 @@ class LazythumbNode(template.Node):
         parser.delete_first_token()
 
     def valid_geometry(self, string):
-        return re.match('^\d+|\d+x\d+$', string):
+        return re.match('^\d+|\d+x\d+$', string)
 
     def parse_geometry(self, string):
         if re.match('^\d$', string):
             return int(string), None
         else: # matches \d+x\d+
             return string.split('x')
-
-    def log_if_any_none(*kwargs):
-        if None in kwargs.values():
 
     def render(self, context):
         # handle thing
@@ -98,7 +100,9 @@ class LazythumbNode(template.Node):
             elif desired_width and not desired_height:
                 # need to get original height and scale it
                 source_height = quack(thing, ['height'], ['photo', 'image'])
-                desired_height = self.scale_h_to_w(source_height, desired_width)
+                source_width = quack(thing, ['width'], ['photo', 'image'])
+                desired_height = scale_h_to_w(source_height,
+                    source_width, desired_width)
 
         geometry = '%sx%s' % (desired_width, desired_height)
         if url:
