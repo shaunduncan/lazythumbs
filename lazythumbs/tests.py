@@ -337,7 +337,7 @@ class TemplateTagRenderTest(TestCase):
         img_tag = self.context['img_tag']
         self.assertEqual(img_tag['height'], 48)
         self.assertEqual(img_tag['width'], 48)
-        self.assertTrue(img_tag['src'])
+        self.assertTrue('url' in img_tag['src'])
 
     def test_invalid_geometry(self):
         """
@@ -351,7 +351,7 @@ class TemplateTagRenderTest(TestCase):
         img_tag = self.context['img_tag']
         self.assertEqual(img_tag['height'], '')
         self.assertEqual(img_tag['width'], '')
-        self.assertTrue(img_tag['src'])
+        self.assertTrue('url' in img_tag['src'])
 
     def test_valid_single_geo(self):
         """ test geo variable that resolves to a single number """
@@ -362,7 +362,7 @@ class TemplateTagRenderTest(TestCase):
         img_tag = self.context['img_tag']
         self.assertEqual(img_tag['width'], 48)
         self.assertEqual(img_tag['height'], '')
-        self.assertTrue(img_tag['src'])
+        self.assertTrue('url' in img_tag['src'])
 
     def test_valid_double_geo(self):
         """ test geo variable that resolves to a pair of numbers """
@@ -373,7 +373,7 @@ class TemplateTagRenderTest(TestCase):
         img_tag = self.context['img_tag']
         self.assertEqual(img_tag['width'], 48)
         self.assertEqual(img_tag['height'], 100)
-        self.assertTrue(img_tag['src'])
+        self.assertTrue('url' in img_tag['src'])
 
     def test_thing_like_IF_introspection_noop(self):
         """
@@ -388,7 +388,7 @@ class TemplateTagRenderTest(TestCase):
         img_tag = self.context['img_tag']
         self.assertEqual(img_tag['width'], 1000)
         self.assertEqual(img_tag['height'], 500)
-        self.assertTrue(img_tag['src'])
+        self.assertTrue('image_path' in img_tag['src'])
 
     def test_thing_like_IF_introspection_no_height(self):
         """
@@ -403,7 +403,7 @@ class TemplateTagRenderTest(TestCase):
         img_tag = self.context['img_tag']
         self.assertEqual(img_tag['width'], 50)
         self.assertEqual(img_tag['height'], 100)
-        self.assertTrue(img_tag['src'])
+        self.assertTrue('image_path' in img_tag['src'])
 
     def test_thing_like_photo_introspection_noop(self):
         """
@@ -418,12 +418,13 @@ class TemplateTagRenderTest(TestCase):
         img_tag = self.context['img_tag']
         self.assertEqual(img_tag['width'], 1000)
         self.assertEqual(img_tag['height'], 500)
-        self.assertTrue(img_tag['src'])
+        self.assertTrue('image_path' in img_tag['src'])
 
     def test_thing_like_photo_introspection_no_height(self):
         """
         test behaviour for when url does not resolve to a string but rather
-        an object that nests an ImageFile-like object
+        an object that nests an ImageFile-like object with no height. height
+        should be scaled.
         """
         node = node_factory("tag img_file resize geo as img_tag")
         self.context['img_file'] = self.PseudoPhoto(100, 200)
@@ -433,7 +434,7 @@ class TemplateTagRenderTest(TestCase):
         img_tag = self.context['img_tag']
         self.assertEqual(img_tag['width'], 50)
         self.assertEqual(img_tag['height'], 100)
-        self.assertTrue(img_tag['src'])
+        self.assertTrue('image_path' in img_tag['src'])
 
     def test_render_url_var_is_str(self):
         node = node_factory("tag url_var resize '30x100' as img_tag")
