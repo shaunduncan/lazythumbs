@@ -92,6 +92,7 @@ class LazythumbNode(Node):
             desired_width, desired_height = self.parse_geometry(self.raw_geometry)
 
         thing = self.thing
+        source_width, source_height = (None, None)
         if type(thing) == type(''):
             url = thing
         else: # look for url, width, height
@@ -121,15 +122,26 @@ class LazythumbNode(Node):
                 desired_height = scale_h_to_w(source_height,
                     source_width, desired_width)
 
-        geometry = '%sx%s' % (desired_width, desired_height)
-        if url:
+        # TODO hate this hideous garbage
+        # initialize img_tag to assume no-op
+        img_tag = dict(
+            src = url or '',
+            width = source_width or '',
+            height = source_height or '',
+        )
+        bad_width = (source_width and desired_width and desired_width >= source_width)
+        bad_height = (source_height and desired_height and desired_height >= source_height)
+        if not (bad_width or bad_height) and url:
+            # TODO bug what if no height
+            geometry = '%sx%s' % (desired_width, desired_height)
             src = '%s/lt/%s/%s/%s/' % (settings.LAZYTHUMBS_URL, self.action, geometry, url)
+            img_tag['src'] = src
+            img_tag['width'] = desired_width or ''
+            img_tag['height'] = desired_height or ''
 
-        img_tag = {
-            'src': src or '',
-            'height': int(desired_height) if desired_height else '',
-            'width': int(desired_width) if desired_width else ''
-        }
+        # TODO sanity. if we can tell the new image would have the same/bigger
+        # dimensions, just use the image's info and don't make a special url
+        # for lazythumbs
 
         context.push()
         context[self.as_var] = img_tag
