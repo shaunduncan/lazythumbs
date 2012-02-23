@@ -15,6 +15,8 @@ from django.http import HttpResponse
 from django.views.generic.base import View
 from PIL import ImageOps, Image
 
+from lazythumbs.util import scale_h_to_w
+
 logger = logging.getLogger(__name__)
 
 def action(fun):
@@ -59,7 +61,7 @@ class LazyThumbRenderer(View):
         do_crop = False
         if height is None:
             do_crop = True
-            height = int(img.size[1] * (float(width) / img.size[0]))
+            height = scale_h_to_w(img.size[1], img.size[0], width)
 
         # prevent upscaling
         width = min(width, img.size[1])
