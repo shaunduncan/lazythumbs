@@ -123,75 +123,70 @@ class LazyThumbRenderer(View):
             width = int(geometry)
             height = None
 
+        rendered_path = self.generate_path(source_path, action, width, height)
+        rendered_path = os.path.join(settings.LAZYTHUMBS_SOURCE_PATH, rendered_path)
+
         cache_key = self.cache_key(source_path, action, width, height)
-        source_meta = cache.get(cache_key)
+        was_404 = cache.get(cache_key)
 
-        if source_meta:
-            source_meta = json.loads(source_meta)
-            was_404 = source_meta['was_404']
+        if was_404 == 1:
+            return self.four_oh_four()
 
-            if was_404:
-                return self.four_oh_four()
-
-            rendered_path = source_meta['rendered_path']
-            rendered_path = os.path.join(settings.LAZYTHUMBS_SOURCE_PATH, rendered_path)
-            try:
-                f = self.fs.open(rendered_path)
-                raw_data = f.read()
-            except IOError:
-                logger.info("%s: thumbnail missing from filesystem, will regenerate" % source_path)
-                _, raw_data = self._render_and_save(action, source_path, width, height)
-            except SuspiciousOperation, e:
-                logger.warning("%s: suspicious operation encountered: %s" % (source_path, e))
-                return self.four_oh_four()
-            finally:
-                return self.two_hundred(raw_data)
-
-        logger.info("%s: cache miss" % source_path)
-        if self.fs.exists(source_path):
-            rendered_path, raw_data = self._render_and_save(action, source_path, width, height)
-            response = self.two_hundred(raw_data)
-            source_meta = dict(rendered_path=rendered_path, was_404=False)
-            expires = settings.LAZYTHUMBS_CACHE_TIMEOUT
-        else:
-            logger.info("%s: not found on filesystem")
-            response = self.four_oh_four()
-            source_meta = dict(rendered_path='', was_404=True)
-            expires = settings.LAZYTHUMBS_404_CACHE_TIMEOUT
-
-        cache.set(cache_key, json.dumps(source_meta), expires)
-
-        return response
-
-    def _render_and_save(self, action, img_path, width, height):
-        """
-        Defers to action_ methods to actually manipulate an image. Saves the
-        resulting image to the filesystem.
-
-        :returns rendered_path: fs path to new image
-        :returns raw_data: raw data of new image as string
-        """
-        action_hash = self.hash_(img_path, action, width, height)
-        rendered_path = '%s%s/%s/%s' % (settings.LAZYTHUMBS_PREFIX, action_hash[0:2], action_hash[2:4], action_hash)
-        img = getattr(self, action)(img_path, width, height)
-        # this code from sorl-thumbnail
-        buf = StringIO()
-        params = {
-            'format': 'JPEG',
-            'optimize': 1,
-            'progressive': True
-        }
+        # TODO this tangled mess of try/except is hideous... but such is
+        # filesystem io?
         try:
-            img.save(buf, **params)
+            # does rendered file already exist?
+            raw_data = self.fs.open(rendered_path).read()
         except IOError:
-            params.pop('optimize')
-            img.save(buf, **params)
-        raw_data = buf.getvalue()
-        buf.close()
+            if was_404 == 0:
+                # then it *was* here last time. if was_404 had been None then
+                # it makes sense for rendered image to not exist yet: we
+                # probably haven't seen it, or it dropped out of cache.
+                logger.info('rendered image previously on fs missing. regenerating')
+            try:
+                pil_img = getattr(self, action)(source_path, width, height)
+                # this code from sorl-thumbnail
+                buf = StringIO()
+                params = {
+                    'format': 'JPEG',
+                    'optimize': 1,
+                    'progressive': True
+                }
+                try:
+                    pil_img.save(buf, **params)
+                except IOError:
+                    logger.info('failed to optimize jpeg, removing option')
+                    params.pop('optimize')
+                    pil_img.save(buf, **params)
+                raw_data = buf.getvalue()
+                buf.close()
+                self.fs.save(rendered_path, ContentFile(raw_data))
+            except (IOError, SuspiciousOperation), e:
+                # we've now failed to find a rendered path as well as the
+                # original source path. this is a 404.
+                logger.info('404: %s' % e)
+                cache.set(cache_key, 1, settings.LAZYTHUMBS_404_CACHE_TIMEOUT)
+                return self.four_oh_four()
 
-        self.fs.save(os.path.join(settings.LAZYTHUMBS_SOURCE_PATH, rendered_path), ContentFile(raw_data))
+        cache.set(cache_key, 0, settings.LAZYTHUMBS_CACHE_TIMEOUT)
 
-        return rendered_path, raw_data
+        return self.two_hundred(raw_data)
+
+    def generate_path(img_path, action, width, height):
+        """
+        Return the path that the rendered form of this image would be saved to.
+        :param img_path: path to an image
+        :param action: an action method name
+        :param width: desired image width in pixels
+        :param height: desired image height in pixels
+
+        :returns: a path to a would-be rendered image
+        """
+        # TODO this method is only called once but might be useful in a script
+        # or elsewhere.
+        action_hash = self.hash_(img_path, action, width, height)
+        return '%s%s/%s/%s' % (settings.LAZYTHUMBS_PREFIX,
+            action_hash[0:2], action_hash[2:4], action_hash)
 
     def cache_key(self, img_path, action, width, height):
         """
