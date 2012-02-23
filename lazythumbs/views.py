@@ -70,7 +70,15 @@ class LazyThumbRenderer(View):
         img = img.resize((width, height), Image.ANTIALIAS)
 
         if do_crop:
-            img = img.crop((0,0, width, width))
+            if width == height:
+                return img
+            # center crop
+            left = 0
+            upper = (height - width) / 2
+            right = width
+            lower = upper + width
+
+            img = img.crop((left, upper, right, lower))
 
         return img
 
@@ -86,9 +94,12 @@ class LazyThumbRenderer(View):
         :returns: PIL.Image
         """
         img = Image.open(img_path)
+        if height is None:
+            height = scale_h_to_w(img.size[1], img.size[0], width)
         # prevent upscaling
         width = min(width, img.size[1])
         height = min(height, img.size[0])
+
         return img.resize((width, height), Image.ANTIALIAS)
 
     def get(self, request, action, geometry, source_path):
