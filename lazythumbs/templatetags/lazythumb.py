@@ -75,13 +75,13 @@ class LazythumbNode(Node):
     def valid_geometry(self, string):
         return re.match('^(?:\d+|\d+x\d+)$', string)
 
-    def parse_geometry(self, string):
-
     def render(self, context):
         source_width = lambda t: quack(t, ['width'], ['photo', 'image'], '')
         source_height = lambda t: quack(t, ['height'], ['photo', 'image'], '')
         def finish(src, width, height):
             context.push()
+            if width: width = int(width)
+            if height: height = int(height)
             context[self.as_var] = dict(src=src, width=width, height=height)
             output = self.nodelist.render(context)
             context.pop()
@@ -95,7 +95,7 @@ class LazythumbNode(Node):
 
         # compute url
         img_object = None
-        url = thing
+        url = self.thing
         if type(url) == Variable:
             resolved_thing = url.resolve(context)
             if type(resolved_thing) == type(''):
@@ -105,19 +105,19 @@ class LazythumbNode(Node):
                 url = quack(img_object, ['url', 'path', 'name'], ['photo', 'image'])
 
         # early exit if didn't get a url or a usable geometry
-        if not url || not self.valid_geometry(geometry):
+        if not url or not self.valid_geometry(geometry):
             return finish(url, source_height(img_object), source_width(img_object))
 
         # parse geometry into width, height
         if re.match('^\d+$', geometry):
             width, height = (geometry, None)
         else: # matches \d+x\d+
-            width, height = string.split('x')
+            width, height = geometry.split('x')
 
         # see if we can compute height
         if not height and img_object:
-            s_h = s_h or source_height(img_object)
-            s_w = s_w or source_width(img_object)
+            s_h = source_height(img_object)
+            s_w = source_width(img_object)
             if s_h and s_w:
                 height = scale_h_to_w(int(s_h), int(s_w), int(width))
             else:
@@ -127,8 +127,6 @@ class LazythumbNode(Node):
         # early exit here. if we can tell the new image would have the
         # same/bigger dimensions, just use the image's info and don't make a
         # special url for lazythumbs
-        s_h = None
-        s_w = None
         if img_object:
             s_w = source_width(img_object)
             if s_w and int(width) >= int(s_w):
