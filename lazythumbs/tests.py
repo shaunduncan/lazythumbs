@@ -50,24 +50,6 @@ class RenderTest(TestCase):
         renderer = MyRenderer()
         self.assertTrue('myaction' in renderer._allowed_actions)
 
-    def test_render_and_save(self):
-        """
-        Make sure the StringIO operations don't explode
-        """
-        class TestRenderer(LazyThumbRenderer):
-            mock_img = Mock()
-            @action
-            def testaction(self, *args, **kwargs):
-                return self.mock_img
-
-        renderer = TestRenderer()
-        renderer.fs.save = Mock()
-
-        path, data = renderer._render_and_save('testaction', 'i/p', 1, 1)
-
-        self.assertTrue(re.match('\w+/\w+/\w+/\w+', path))
-        self.assertTrue(TestRenderer.mock_img.save.called)
-
     def test_thumbnail_no_height(self):
         """
         Test behavior of thumbnail action when no height is provided
