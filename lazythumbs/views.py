@@ -12,7 +12,7 @@ from django.core.files.base import ContentFile
 from django.core.exceptions import SuspiciousOperation
 from django.http import HttpResponse
 from django.views.generic.base import View
-from PIL import ImageOps, Image
+from PIL import Image
 
 from lazythumbs.util import scale_h_to_w
 
@@ -184,7 +184,7 @@ class LazyThumbRenderer(View):
 
         return self.two_hundred(raw_data)
 
-    def generate_path(img_path, action, width, height):
+    def generate_path(self, img_path, action, width, height):
         """
         Return the path that the rendered form of this image would be saved to.
         :param img_path: path to an image
