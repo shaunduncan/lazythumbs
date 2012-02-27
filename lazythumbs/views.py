@@ -1,6 +1,5 @@
 from cStringIO import StringIO
 from hashlib import md5
-import json
 import logging
 import os
 import re

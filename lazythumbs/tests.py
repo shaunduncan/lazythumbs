@@ -132,20 +132,22 @@ class RenderTest(TestCase):
 class GetViewTest(TestCase):
     """ Test behavior of LazyThumbRenderer.get """
 
-    def mc_factory(self, rendered_path, was_404):
+    def mc_factory(self, was_404):
         """
-        churn out mocked caches with a preset .get(). json-serializes
-        incoming data. Also a rapper?
+        churn out mocked caches with a preset .get(). Also a rapper?
         """
         mc = Mock()
-        ret = dict(rendered_path=rendered_path, was_404=was_404)
-        jsonned = json.dumps(ret)
-        mc.get = Mock(return_value=jsonned)
+        ret = was_404
+        mc.get = Mock(return_value=ret)
         mc.set = Mock()
         return mc
 
     def setUp(self):
         self.renderer = LazyThumbRenderer()
+        self.mock_Image = Mock()
+        self.mock_img = Mock()
+        self.mock_Image.open = Mock(return_value=self.mock_img)
+        self.mock_img.size = [1,1]
 
     def test_img_404_warm_cache(self):
         """
@@ -153,54 +155,18 @@ class GetViewTest(TestCase):
         cache or touching filesystem if we encounter a cached 404.
         """
         self.renderer._render_and_save = Mock()
-        with patch('lazythumbs.views.cache', self.mc_factory('', True)) as mc:
+        with patch('lazythumbs.views.cache', self.mc_factory(1)) as mc:
             resp = self.renderer.get(Mock(), 'thumbnail', '48', 'i/p')
         self.assertEqual(resp.status_code, 404)
         self.assertEqual(resp['Content-Type'], 'image/jpeg')
         self.assertTrue('Cache-Control' in resp)
-        self.assertFalse(self.renderer._render_and_save.called)
         self.assertFalse(mc.set.called)
-
-    def test_warm_cache_warm_fs(self):
-        """
-        Cached 200 case. Reads rendered image and serves it without setting
-        anything new in cache.
-        """
-        mock_file = Mock()
-        mock_file.read = Mock(return_value='data')
-        self.renderer.fs.open = Mock(return_value=mock_file)
-        self.renderer._render_and_save = Mock()
-        with patch('lazythumbs.views.cache',self.mc_factory('t/p',False)) as mc:
-            resp = self.renderer.get(Mock(), 'thumbnail', '48', 'i/p')
-        self.assertEqual(resp.status_code, 200)
-        self.assertEqual(resp.content, 'data')
-        self.assertEqual(resp['Content-Type'], 'image/jpeg')
-        self.assertTrue('Cache-Control' in resp)
-        self.assertFalse(self.renderer._render_and_save.called)
-        self.assertFalse(mc.set.called)
-
-    def test_warm_cache_cold_fs(self):
-        """
-        When a thumbnail is recorded as a 200 in cache but is gone from the
-        file system, make sure we regenerate and return 200.
-        """
-        self.renderer.fs.open = Mock(side_effect=IOError())
-        self.renderer._render_and_save = Mock(return_value=('t/p', 'data'))
-        with patch('lazythumbs.views.cache',self.mc_factory('t/p',False)) as mc:
-            resp = self.renderer.get(Mock(), 'thumbnail', '48', 'i/p')
-        self.assertTrue(self.renderer._render_and_save.called)
-        self.assertFalse(mc.set.called)
-        self.assertEqual(resp.content, 'data')
-        self.assertEqual(resp['Content-Type'], 'image/jpeg')
-        self.assertTrue('Cache-Control' in resp)
-        self.assertEqual(resp.status_code, 200)
 
     def test_img_404_cold_cache(self):
         """
         Basic 404: requested image is not found. Make sure proper response
         headers are set and the 404 was cached.
         """
-        self.renderer._render_and_save = Mock(return_value=('t/p', 'data'))
         with patch('lazythumbs.views.cache', MockCache()) as mc:
             resp = self.renderer.get(Mock(), 'thumbnail', '48', 'i/p')
         self.assertEqual(resp.status_code, 404)
@@ -208,30 +174,28 @@ class GetViewTest(TestCase):
         self.assertTrue('Cache-Control' in resp)
         self.assertEqual(len(mc.cache.keys()), 1)
         key = mc.cache.keys()[0]
-        cached = json.loads(mc.cache[key])
-        self.assertEqual(cached['rendered_path'], '')
-        self.assertEqual(cached['was_404'], True)
+        cached = mc.cache[key]
+        self.assertEqual(cached, 1)
 
     def test_img_200_cold_cache(self):
         """
         Pretend we found the requested rendered image on the filesystem. Ensure
         proper response headers are set and the rendered path was cached.
         """
-        self.renderer._render_and_save = Mock(return_value=('t/p', 'data'))
-        self.renderer.fs.exists = Mock(return_value=True)
-        with patch('lazythumbs.views.cache', MockCache()) as mc:
-            resp = self.renderer.get(Mock(), 'thumbnail', '48', 'i/p')
+        self.renderer.fs.save = Mock()
+        with patch('lazythumbs.views.Image', self.mock_Image):
+            with patch('lazythumbs.views.cache', MockCache()) as mc:
+                resp = self.renderer.get(Mock(), 'thumbnail', '48', 'i/p')
 
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp['Content-Type'], 'image/jpeg')
         self.assertTrue('Cache-Control' in resp)
-        self.assertEqual(resp.content, 'data')
+        self.assertEqual(resp.content, '') # empty buffer means raw_data is ''
         self.assertEqual(len(mc.cache.keys()), 1)
 
         key = mc.cache.keys()[0]
-        cached = json.loads(mc.cache[key])
-        self.assertEqual(cached['rendered_path'], 't/p')
-        self.assertEqual(cached['was_404'], False)
+        cached = mc.cache[key]
+        self.assertEqual(cached, False)
 
 
 class TemplateTagSyntaxTest(TestCase):
@@ -328,6 +292,7 @@ class TemplateTagRenderTest(TestCase):
         """
         node = node_factory("tag 'url' resize geo as img_tag")
         self.context['geo'] = 'boom'
+        self.context['url'] = 'i/p'
         node.render(self.mock_cxt)
 
         img_tag = self.context['img_tag']
