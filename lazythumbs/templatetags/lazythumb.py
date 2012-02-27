@@ -106,11 +106,11 @@ class LazythumbNode(Node):
 
         # early exit if didn't get a url or a usable geometry
         if not url or not self.valid_geometry(geometry):
-            return finish(url, source_height(img_object), source_width(img_object))
+            return finish(url, source_width(img_object), source_height(img_object))
 
         # parse geometry into width, height
         if re.match('^\d+$', geometry):
-            width, height = (geometry, None)
+            width, height = (geometry, '')
         else: # matches \d+x\d+
             width, height = geometry.split('x')
 

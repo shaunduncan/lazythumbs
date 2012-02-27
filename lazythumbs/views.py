@@ -45,44 +45,48 @@ class LazyThumbRenderer(View):
         ]
 
     @action
-    def thumbnail(self, img_path, width, height=None):
+    def thumbnail(self, **kwargs):
         """
         Scale in one or two dimensions and then perform a left crop (if only
         one dimension was specified).
 
         :param img_path: path to an image to be thumbnailed
         :param width: width in pixels of desired thumbnail
-        :param height: height in pixels of desired thumbnail (optional)
 
         :returns: PIL.Image
         """
+        img_path = kwargs['img_path']
+        width = kwargs['width']
         img = Image.open(img_path)
-        do_crop = False
-        if height is None:
-            do_crop = True
-            height = scale_h_to_w(img.size[1], img.size[0], width)
+        height = scale_h_to_w(img.size[1], img.size[0], width)
+
+        if width == img.size[0] and height == img.size[1]:
+            return img
 
         # prevent upscaling
-        width = min(width, img.size[1])
-        height = min(height, img.size[0])
+        width = min(width, img.size[0])
+        height = min(height, img.size[1])
 
         img = img.resize((width, height), Image.ANTIALIAS)
 
-        if do_crop:
-            if width == height:
-                return img
-            # center crop
-            left = 0
-            upper = (height - width) / 2
-            right = width
-            lower = upper + width
+        if width != height:
+            if width > height:
+                left = (width - height) / 2
+                upper = 0
+                right = left + height
+                lower = height
+            elif width < height:
+                left = 0
+                upper = (height - width) / 2
+                right = width
+                lower = upper + width
 
             img = img.crop((left, upper, right, lower))
 
         return img
 
     @action
-    def resize(self, img_path, width, height):
+    def resize(self, **kwargs):
         """
         resize to given dimenions.
 
@@ -92,6 +96,10 @@ class LazyThumbRenderer(View):
 
         :returns: PIL.Image
         """
+        img_path = kwargs['img_path']
+        width = kwargs['width']
+        height = kwargs.get('height', None)
+
         img = Image.open(img_path)
         if height is None:
             height = scale_h_to_w(img.size[1], img.size[0], width)
@@ -156,7 +164,8 @@ class LazyThumbRenderer(View):
                 # probably haven't seen it, or it dropped out of cache.
                 logger.info('rendered image previously on fs missing. regenerating')
             try:
-                pil_img = getattr(self, action)(source_path, width, height)
+                kwargs = dict(width=width, img_path=source_path, height=height)
+                pil_img = getattr(self, action)(**kwargs)
                 # this code from sorl-thumbnail
                 buf = StringIO()
                 params = {

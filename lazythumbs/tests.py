@@ -20,7 +20,7 @@ class MockCache(object):
 class MockImg(object):
     def __init__(self):
         self.called = []
-        self.size = (100, 100)
+        self.size = (1000, 1000)
     def resize(self, size, _):
         self.called.append('resize')
         self.size = size
@@ -50,33 +50,66 @@ class RenderTest(TestCase):
         renderer = MyRenderer()
         self.assertTrue('myaction' in renderer._allowed_actions)
 
-    def test_thumbnail_no_height(self):
+    def test_thumbnail_noop(self):
         """
-        Test behavior of thumbnail action when no height is provided
+        Test that no image operations occur if the desired w/h match image's
+        existing w/h
         """
         renderer = LazyThumbRenderer()
         mock_img = MockImg()
+        mock_img.size = (100, 100)
         mock_Image = Mock()
         mock_Image.open = Mock(return_value=mock_img)
         with patch('lazythumbs.views.Image', mock_Image):
-            img = renderer.thumbnail('i/p', 48)
-        self.assertEqual(img.size[0], 48)
+            img = renderer.thumbnail(**{'img_path':'i/p', 'width':100})
+        self.assertEqual(img.size[0], 100)
+        self.assertEqual(img.size[1], 100)
+        self.assertEqual(len(mock_img.called), 0)
+
+    def test_thumbnail_w_gt_h(self):
+        """
+        Test behavior of thumbnail action when width > height
+        """
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg()
+        mock_img.size = (200, 100)
+        mock_Image = Mock()
+        mock_Image.open = Mock(return_value=mock_img)
+        with patch('lazythumbs.views.Image', mock_Image):
+            img = renderer.thumbnail(**{'img_path':'i/p', 'width':50})
+        self.assertEqual(img.size[0], 50)
         self.assertEqual(len(mock_img.called), 2)
         self.assertTrue('resize' in mock_img.called)
         self.assertTrue('crop' in mock_img.called)
 
-    def test_thumbnail_with_height(self):
+    def test_thumbnail_h_gt_w(self):
         """
-        Test behavior of thumbnail action when both width and height are
-        provided.
+        Test behavior of thumbnail action when no height > width
         """
         renderer = LazyThumbRenderer()
         mock_img = MockImg()
+        mock_img.size = (100, 200)
         mock_Image = Mock()
         mock_Image.open = Mock(return_value=mock_img)
         with patch('lazythumbs.views.Image', mock_Image):
-            img = renderer.thumbnail('i/p', 48, 50)
-        self.assertEqual(img.size[0], 48)
+            img = renderer.thumbnail(**{'img_path':'i/p', 'width':50})
+        self.assertEqual(len(mock_img.called), 2)
+        self.assertTrue('resize' in mock_img.called)
+        self.assertTrue('crop' in mock_img.called)
+        self.assertEqual(img.size[0], 50)
+
+    def test_thumbnail_square(self):
+        """
+        Test behavior of thumbnail action when no width == height
+        """
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg()
+        mock_img.size = (100, 100)
+        mock_Image = Mock()
+        mock_Image.open = Mock(return_value=mock_img)
+        with patch('lazythumbs.views.Image', mock_Image):
+            img = renderer.thumbnail(**{'img_path':'i/p', 'width':50})
+        self.assertEqual(img.size[0], 50)
         self.assertEqual(img.size[1], 50)
         self.assertEqual(len(mock_img.called), 1)
         self.assertTrue('resize' in mock_img.called)
@@ -87,10 +120,11 @@ class RenderTest(TestCase):
         """
         renderer = LazyThumbRenderer()
         mock_img = MockImg()
+        mock_img.size = (100, 100)
         mock_Image = Mock()
         mock_Image.open = Mock(return_value=mock_img)
         with patch('lazythumbs.views.Image', mock_Image):
-            img = renderer.thumbnail('i/p', 200, 200)
+            img = renderer.thumbnail(**{'img_path':'i/p', 'width':20000})
 
         self.assertEqual(img.size[0], 100)
         self.assertEqual(img.size[1], 100)
@@ -107,7 +141,7 @@ class RenderTest(TestCase):
         mock_Image = Mock()
         mock_Image.open = Mock(return_value=mock_img)
         with patch('lazythumbs.views.Image', mock_Image):
-            img = renderer.resize('i/p', 48, 50)
+            img = renderer.resize(**{'img_path':'i/p', 'width':48, 'height':50})
         self.assertEqual(img.size[0], 48)
         self.assertEqual(img.size[1], 50)
         self.assertEqual(len(mock_img.called), 1)
@@ -122,10 +156,10 @@ class RenderTest(TestCase):
         mock_Image = Mock()
         mock_Image.open = Mock(return_value=mock_img)
         with patch('lazythumbs.views.Image', mock_Image):
-            img = renderer.resize('i/p', 200, 200)
+            img = renderer.resize(**{'img_path':'i/p', 'width':2000, 'height':2000})
 
-        self.assertEqual(img.size[0], 100)
-        self.assertEqual(img.size[1], 100)
+        self.assertEqual(img.size[0], 1000)
+        self.assertEqual(img.size[1], 1000)
         self.assertEqual(len(mock_img.called), 1)
         self.assertTrue('resize' in mock_img.called)
 
