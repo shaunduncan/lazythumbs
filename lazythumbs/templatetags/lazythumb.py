@@ -23,12 +23,12 @@ register = Library()
 logger = logging.getLogger(__name__)
 
 
-def quack(thing, properties, levels=[]):
+def quack(thing, properties, levels=[], default=None):
     to_search = [thing] + filter(None, [getattr(thing,l,None) for l in levels])
     first = lambda f, xs, d: (chain((x for x in xs if f(x)), [d])).next()
 
     for t in to_search:
-        prop = first(partial(hasattr, t), properties, None)
+        prop = first(partial(hasattr, t), properties, default)
         if prop is not None:
             return getattr(t, prop)
 
@@ -72,80 +72,71 @@ class LazythumbNode(Node):
         return re.match('^(?:\d+|\d+x\d+)$', string)
 
     def parse_geometry(self, string):
-        if re.match('^\d+$', string):
-            return string, None
-        else: # matches \d+x\d+
-            return string.split('x')
 
     def render(self, context):
-        # handle thing
-        # thing is either a string (url), an ImageFile, or some random object that supports hasattr, getattr.
-        # what's our target? src, width, height.
+        source_width = lambda t: quack(t, ['width'], ['photo', 'image'], '')
+        source_height = lambda t: quack(t, ['height'], ['photo', 'image'], '')
+        def finish(src, width, height):
+            context.push()
+            context[self.as_var] = dict(src=src, width=width, height=height)
+            output = self.nodelist.render(context)
+            context.pop()
+            return output
+
+        # potentially resolve geometry
         if type(self.raw_geometry) == Variable:
             geometry = self.raw_geometry.resolve(context)
-            if not self.valid_geometry(geometry):
-                desired_width = None
-                desired_height = None
-            else:
-                desired_width, desired_height = self.parse_geometry(geometry)
         else:
-            desired_width, desired_height = self.parse_geometry(self.raw_geometry)
+            geometry = self.raw_geometry
 
-        thing = self.thing
-        source_width, source_height = (None, None)
-        if type(thing) == type(''):
-            url = thing
-        else: # look for url, width, height
-            thing = self.thing.resolve(context)
-            if type(thing) == type(''):
-                url = thing
+        # compute url
+        img_object = None
+        url = thing
+        if type(url) == Variable:
+            resolved_thing = url.resolve(context)
+            if type(resolved_thing) == type(''):
+                url = resolved_thing
             else:
-                url = quack(thing, ['url', 'path', 'name'], ['photo', 'image'])
-            # if d_w and d_h: pass
-            # if !d_w and !d_h: grab original, this will be a no-op
-            # if !d_w and d_h: something strange. use original (no-op case)
-            # if d_w and !d_h: scale original height
-            if not desired_width and not desired_height:
-                # this will be a no-op; send along original dimensions
-                desired_width = quack(thing, ['width'], ['photo', 'image'])
-                desired_height = quack(thing, ['height'], ['photo', 'image'])
-                logging.warn("lazythumb: got neither width nor height making no-op")
-            elif not desired_width and desired_height:
-                # something strange has happened. make this a no-op and log.
-                desired_width = quack(thing, ['width'], ['photo', 'image'])
-                desired_height = quack(thing, ['height'], ['photo', 'image'])
-                logging.warn("lazythumb: got height but not width; making no-op")
-            elif desired_width and not desired_height:
-                # need to get original height and scale it
-                source_width = quack(thing, ['width'], ['photo', 'image'])
-                source_height = quack(thing, ['height'], ['photo', 'image'])
-                desired_height = scale_h_to_w(source_height,
-                    source_width, desired_width)
+                img_object = resolved_thing
+                url = quack(img_object, ['url', 'path', 'name'], ['photo', 'image'])
 
-        # TODO hate this hideous garbage
-        # initialize img_tag to assume no-op
-        img_tag = dict(
-            src = url or '',
-            width = source_width or '',
-            height = source_height or '',
-        )
-        bad_width = (source_width and desired_width and desired_width >= source_width)
-        bad_height = (source_height and desired_height and desired_height >= source_height)
-        if not (bad_width or bad_height) and url:
-            # TODO bug what if no height
-            geometry = '%sx%s' % (desired_width, desired_height)
-            src = '%s/lt/%s/%s/%s/' % (settings.LAZYTHUMBS_URL, self.action, geometry, url)
-            img_tag['src'] = src
-            img_tag['width'] = desired_width or ''
-            img_tag['height'] = desired_height or ''
+        # early exit if didn't get a url or a usable geometry
+        if not url || not self.valid_geometry(geometry):
+            return finish(url, source_height(img_object), source_width(img_object))
 
-        # TODO sanity. if we can tell the new image would have the same/bigger
-        # dimensions, just use the image's info and don't make a special url
-        # for lazythumbs
+        # parse geometry into width, height
+        if re.match('^\d+$', geometry):
+            width, height = (geometry, None)
+        else: # matches \d+x\d+
+            width, height = string.split('x')
 
-        context.push()
-        context[self.as_var] = img_tag
-        output = self.nodelist.render(context)
-        context.pop()
+        # see if we can compute height
+        if not height and img_object:
+            s_h = s_h or source_height(img_object)
+            s_w = s_w or source_width(img_object)
+            if s_h and s_w:
+                height = scale_h_to_w(int(s_h), int(s_w), int(width))
+            else:
+                height = ''
 
-        return output
+        # if it's possible to compute source dimensions there's a potential
+        # early exit here. if we can tell the new image would have the
+        # same/bigger dimensions, just use the image's info and don't make a
+        # special url for lazythumbs
+        s_h = None
+        s_w = None
+        if img_object:
+            s_w = source_width(img_object)
+            if s_w and int(width) >= int(s_w):
+                return finish(url, s_w, source_height(img_object))
+            s_h = source_height(img_object)
+            if s_h and int(height) >= int(s_h):
+                return finish(url, s_w or source_width(img_object), s_h)
+
+        if width and height:
+            geometry = '%sx%s' % (width, height)
+        else:
+            geometry = width
+
+        src = '%s/lt/%s/%s/%s/' % (settings.LAZYTHUMBS_URL, self.action, geometry, url)
+        return finish(src, width, height)
