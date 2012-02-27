@@ -24,13 +24,17 @@ logger = logging.getLogger(__name__)
 
 
 def quack(thing, properties, levels=[], default=None):
+    if thing is None:
+        return default
     to_search = [thing] + filter(None, [getattr(thing,l,None) for l in levels])
     first = lambda f, xs, d: (chain((x for x in xs if f(x)), [d])).next()
 
     for t in to_search:
         prop = first(partial(hasattr, t), properties, default)
-        if prop is not None:
+        if prop:
             return getattr(t, prop)
+
+    return default
 
 register.tag('lazythumb', lambda p,t: LazythumbNode(p,t))
 class LazythumbNode(Node):
