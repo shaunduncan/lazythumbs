@@ -206,8 +206,8 @@ class LazyThumbRenderer(View):
         # TODO this method is only called once but might be useful in a script
         # or elsewhere.
         action_hash = self.hash_(img_path, action, width, height)
-        return '%s%s/%s/%s' % (settings.LAZYTHUMBS_PREFIX,
-            action_hash[0:2], action_hash[2:4], action_hash)
+        return os.path.join(settings.LAZYTHUMBS_PREFIX, action_hash[0:2],
+            action_hash[2:4], action_hash)
 
     def cache_key(self, img_path, action, width, height):
         """
