@@ -102,7 +102,7 @@ class LazythumbNode(Node):
                 url = resolved_thing
             else:
                 img_object = resolved_thing
-                url = quack(img_object, ['url', 'path', 'name'], ['photo', 'image'])
+                url = quack(img_object, ['name', 'url', 'path'], ['photo', 'image'])
 
         # early exit if didn't get a url or a usable geometry
         if not url or not self.valid_geometry(geometry):
