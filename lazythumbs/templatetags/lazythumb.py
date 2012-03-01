@@ -6,10 +6,11 @@
         <img src="{{img_tag.src}}" width="{{img_tag.width}}" height="{{img_tag.height}} />
     {% endlazythumb %}
 """
-from functools import partial
-from itertools import chain
 import logging
 import re
+from functools import partial
+from itertools import chain
+from urlparse import urlparse
 
 from django.template import TemplateSyntaxError, Library, Node, Variable
 from django.conf import settings
@@ -103,6 +104,13 @@ class LazythumbNode(Node):
             else:
                 img_object = resolved_thing
                 url = quack(img_object, ['name', 'url', 'path'], ['photo', 'image'])
+
+        # see if we got a fully qualified url
+        if url.startswith('http'):
+            parsed = urlparse(url)
+            path = parsed.path
+            # TODO do we need to further operate on path? if not, collapse this into one call
+            url = path
 
         # early exit if didn't get a url or a usable geometry
         if not url or not self.valid_geometry(geometry):
