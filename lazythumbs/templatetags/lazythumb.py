@@ -107,10 +107,11 @@ class LazythumbNode(Node):
 
         # see if we got a fully qualified url
         if url.startswith('http'):
-            parsed = urlparse(url)
-            path = parsed.path
-            # TODO do we need to further operate on path? if not, collapse this into one call
-            url = path
+            url = url.replace(settings.MEDIA_URL, '')
+            #parsed = urlparse(url)
+            #path = parsed.path
+            ## TODO do we need to further operate on path? if not, collapse this into one call
+            #url = path
 
         # early exit if didn't get a url or a usable geometry
         if not url or not self.valid_geometry(geometry):
