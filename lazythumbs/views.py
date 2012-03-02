@@ -47,21 +47,31 @@ class LazyThumbRenderer(View):
     @action
     def thumbnail(self, **kwargs):
         """
-        Scale in one or two dimensions and then perform a left crop (if only
-        one dimension was specified).
+        Scale in larget dimension given. If only one parameter is provided,
+        width is assumed.
 
         :param img_path: path to an image to be thumbnailed
         :param width: width in pixels of desired thumbnail
+        :param height: height in pixels of desired thumbnail.
 
         :returns: PIL.Image
         """
         img_path = kwargs['img_path']
-        width = kwargs['width']
-        img = Image.open(img_path)
-        height = scale_h_to_w(img.size[1], img.size[0], width)
 
-        if width == img.size[0] and height == img.size[1]:
-            return img
+        img = Image.open(os.path.join(settings.MEDIA_ROOT, img_path))
+        source_width = img.size[0]
+        source_height = img.size[1]
+
+        width = int(kwargs['width'])
+        height = kwargs.get('height', None)
+
+        if height is None or width > height:
+            height = source_height if height is None else int(height)
+            ratio = source_width / float(width)
+            height = ratio * height
+        else:
+            ratio = source_height / float(height)
+            width = ratio * width
 
         # prevent upscaling
         width = min(width, img.size[0])
@@ -69,21 +79,36 @@ class LazyThumbRenderer(View):
 
         img = img.resize((width, height), Image.ANTIALIAS)
 
-        if width != height:
-            if width > height:
-                left = (width - height) / 2
-                upper = 0
-                right = left + height
-                lower = height
-            elif width < height:
-                left = 0
-                upper = (height - width) / 2
-                right = width
-                lower = upper + width
-
-            img = img.crop((left, upper, right, lower))
-
         return img
+
+       # # height = scale_h_to_w(img.size[1], img.size[0], width)
+
+       # #if width == img.size[0] and height == img.size[1]:
+       # #    return img
+
+       # # prevent upscaling
+       # # width = min(width, img.size[0])
+       # # height = min(height, img.size[1])
+
+       # target_width, target_height = (img.size[0], img.size[0])
+
+       # img = img.resize((width, height), Image.ANTIALIAS)
+
+       # if width != height:
+       #     if width > height:
+       #         left = (width - height) / 2
+       #         upper = 0
+       #         right = left + height
+       #         lower = height
+       #     elif width < height:
+       #         left = 0
+       #         upper = (height - width) / 2
+       #         right = width
+       #         lower = upper + width
+
+       #     img = img.crop((left, upper, right, lower))
+
+       # return img
 
     @action
     def resize(self, **kwargs):
