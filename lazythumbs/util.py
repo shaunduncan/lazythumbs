@@ -1,9 +1,18 @@
-def scale_h_to_w(source_height, source_width, target_width):
-    """
-    Compute the height for an image being scaled width-wise, preserving ratio
+def geometry_parse(action, geo_str, exc):
+    if action == 'thumbnail':
+        width_match = re.match('^(\d+)$', geo_str)
+        height_match = re.match('^x(\d+)$', geo_str)
+        width, height = (
+             width_match.groups[0] if width_match else None,
+             height_match.groups[0] if height_match else None
+        )
+        if width is None and height is None:
+            raise exc('must supply either a height or a width for thumbnail')
 
-    :param source_height: image's current height in pixels
-    :param source_width: image's current width in pixels
-    :param target_width: the width being scaled to
-    """
-    return int(source_height * (float(target_width) / source_width))
+        return width, height
+
+    if action in ('resize', 'scale'):
+        wh_match = re.match('^(\d+)x(\d+)', geo_str)
+        if not wh_match:
+            raise exc('both width and height required for %s' % action)
+        return wh_match.groups()

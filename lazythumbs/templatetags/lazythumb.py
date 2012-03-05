@@ -12,6 +12,8 @@ from functools import partial
 from itertools import chain
 from urlparse import urlparse
 
+from lazythumbs.util import geometry_parse
+
 from django.template import TemplateSyntaxError, Library, Node, Variable
 from django.conf import settings
 from django.core.files.images import ImageFile
@@ -20,26 +22,6 @@ SUPPORTED_ACTIONS = ['thumbnail', 'resize']
 
 register = Library()
 logger = logging.getLogger(__name__)
-
-def geometry_parse(action, geo_str, exc):
-    if action == 'thumbnail':
-        width_match = re.match('^(\d+)$', geo_str)
-        height_match = re.match('^x(\d+)$', geo_str)
-        width, height = (
-             width_match.groups[0] if width_match else None,
-             height_match.groups[0] if height_match else None
-        )
-        if width is None and height is None:
-            raise exc('must supply either a height or a width for thumbnail')
-
-        return width, height
-
-    if action == 'resize':
-        wh_match = re.match('^(\d+)x(\d+)', geo_str)
-        if not wh_match:
-            raise exc('both width and height required for resize')
-        return wh_match.groups()
-
 
 def quack(thing, properties, levels=[], default=None):
     if thing is None:
