@@ -120,9 +120,9 @@ class LazythumbNode(Node):
                 logger.warn('got junk geometry variable resolution: %s' % e)
 
         # early exit if didn't get a url or a usable geometry (depending on action)
-        if not url or
-                self.action == 'resize' and not (width and height) or
-                self.action == 'thumbnail' and not (width or height):
+        if not url or \
+                (self.action == 'resize' and not (width and height)) or \
+                (self.action == 'thumbnail' and not (width or height)):
             return finish(url, source_width(img_object), source_height(img_object))
 
         # at this point we have our geo information as well as our action. if
@@ -134,12 +134,14 @@ class LazythumbNode(Node):
                 scale = lambda a, b, c: a * (b / c)
                 if not width:
                     s_w = source_width(img_object)
+                    s_h = source_height(img_object)
                     if s_w:
-                        width = scale(s_w, s_h, float(height))
+                        width = scale(s_w, float(height), s_h)
                 if not height:
+                    s_w = source_width(img_object)
                     s_h = source_height(img_object)
                     if s_h:
-                        height = scale(s_h, s_w, float(width))
+                        height = scale(s_h, float(width), s_w)
 
         # if it's possible to compute source dimensions there's a potential
         # early exit here. if we can tell the new image would have the

@@ -14,7 +14,7 @@ from django.http import HttpResponse
 from django.views.generic.base import View
 from PIL import Image
 
-from lazythumbs.util import scale_h_to_w
+from lazythumbs.util import geometry_parse
 
 logger = logging.getLogger(__name__)
 
@@ -52,15 +52,17 @@ class LazyThumbRenderer(View):
 
         TODO
         """
-        img = kwargs.get('img', self.get_pil_from_path(kwargs['img_path']))
+        img = kwargs.get('img') or self.get_pil_from_path(kwargs['img_path'])
 
         width = kwargs['width']
         height = kwargs['height']
+        source_width = img.size[0]
+        source_height = img.size[1]
 
-        img = self.thumbnail({
-            img: img,
-            width: width if width >= height else None,
-            height: height if width < height else None,
+        img = self.thumbnail(**{
+            'img': img,
+            'width': width if source_width < source_height else None,
+            'height': height if source_height <= source_width else None
         })
 
         # see if we even have to crop
@@ -82,18 +84,17 @@ class LazyThumbRenderer(View):
 
         TODO
         """
-        img = kwargs.get('img', self.get_pil_from_path(kwargs['img_path']))
+        img = kwargs.get('img') or self.get_pil_from_path(kwargs['img_path'])
         source_width = img.size[0]
         source_height = img.size[1]
         scale = lambda a,b,c: int(int(a) * float(b) / float(c))
 
         # we are guaranteed to have either height or width which lets us take
-        # some validation shortcuts here. KeyErrors mean a fatal error, so just
-        # let em fly.
-        width = kwargs.get('width', scale(source_width, source_height, kwargs['height']))
-        height = kwargs.get('height', scale(source_height, source_width, kwargs['width']))
+        # some validation shortcuts here.
+        width = kwargs.get('width') or scale(source_width, kwargs.get('height'), source_height)
+        height = kwargs.get('height') or scale(source_height, kwargs.get('width'), source_width)
 
-        return self.scale({
+        return self.scale(**{
             'img': img,
             'width': width,
             'height': height,
@@ -106,18 +107,18 @@ class LazyThumbRenderer(View):
 
         TODO
         """
-        img = kwargs.get('img', self.get_pil_from_path(kwargs['img_path']))
+        img = kwargs.get('img') or self.get_pil_from_path(kwargs['img_path'])
 
         width = kwargs['width']
         height = kwargs['height']
 
         if width > img.size[0]:
-            raise ValueError('No upscaling: %s > %s' % (width, img.size[0]))
+            width = img.size[0]
 
         if height > img.size[1]:
-            raise ValueError('No upscaling: %s > %s' % (height, img.size[1]))
+            height = img.size[1]
 
-        return img.scale((width, height))
+        return img.resize((width, height), Image.ANTIALIAS)
 
     def get_pil_from_path(self, img_path):
         """
