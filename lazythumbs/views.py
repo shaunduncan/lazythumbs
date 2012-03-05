@@ -45,94 +45,90 @@ class LazyThumbRenderer(View):
         ]
 
     @action
-    def thumbnail(self, **kwargs):
-        """
-        Scale in larget dimension given. If only one parameter is provided,
-        width is assumed.
-
-        :param img_path: path to an image to be thumbnailed
-        :param width: width in pixels of desired thumbnail
-        :param height: height in pixels of desired thumbnail.
-
-        :returns: PIL.Image
-        """
-        img_path = kwargs['img_path']
-
-        img = Image.open(os.path.join(settings.MEDIA_ROOT, img_path))
-        source_width = img.size[0]
-        source_height = img.size[1]
-
-        width = int(kwargs['width'])
-        height = kwargs.get('height', None)
-
-        if height is None or width > height:
-            height = source_height if height is None else int(height)
-            ratio = source_width / float(width)
-            height = ratio * height
-        else:
-            ratio = source_height / float(height)
-            width = ratio * width
-
-        # prevent upscaling
-        width = min(width, img.size[0])
-        height = min(height, img.size[1])
-
-        img = img.resize((width, height), Image.ANTIALIAS)
-
-        return img
-
-       # # height = scale_h_to_w(img.size[1], img.size[0], width)
-
-       # #if width == img.size[0] and height == img.size[1]:
-       # #    return img
-
-       # # prevent upscaling
-       # # width = min(width, img.size[0])
-       # # height = min(height, img.size[1])
-
-       # target_width, target_height = (img.size[0], img.size[0])
-
-       # img = img.resize((width, height), Image.ANTIALIAS)
-
-       # if width != height:
-       #     if width > height:
-       #         left = (width - height) / 2
-       #         upper = 0
-       #         right = left + height
-       #         lower = height
-       #     elif width < height:
-       #         left = 0
-       #         upper = (height - width) / 2
-       #         right = width
-       #         lower = upper + width
-
-       #     img = img.crop((left, upper, right, lower))
-
-       # return img
-
-    @action
     def resize(self, **kwargs):
         """
-        resize to given dimenions.
+        Thumbnail+center crop. Resize along larger dimension and then center crop to
+        meet smaller dimension.
 
-        :param img_path: path to an image to be resizeed
-        :param width: width in pixels of new image
-        :param height: height in pixels of  new image
-
-        :returns: PIL.Image
+        TODO
         """
-        img_path = kwargs['img_path']
+        img = kwargs.get('img', self.get_pil_from_path(kwargs['img_path']))
+
         width = kwargs['width']
-        height = kwargs.get('height', None)
+        height = kwargs['height']
 
-        img = Image.open(img_path)
-        if height is None:
-            height = scale_h_to_w(img.size[1], img.size[0], width)
-        # prevent upscaling
-        width = min(width, img.size[1])
-        height = min(height, img.size[0])
+        img = self.thumbnail({
+            img: img,
+            width: width if width >= height else None,
+            height: height if width < height else None,
+        })
 
-        return img.resize((width, height), Image.ANTIALIAS)
+        # see if we even have to crop
+        if img.size == (width, height):
+            return img
+
+        left = (img.size[0] - width) / 2
+        top = (img.size[1] - height) / 2
+        right = left + width
+        bottom = top + height
+
+        return img.crop((left, top, right, bottom))
+
+    @action
+    def thumbnail(self, **kwargs):
+        """
+        Scale in one dimension. Either width or height must be provided
+        in kwargs.
+
+        TODO
+        """
+        img = kwargs.get('img', self.get_pil_from_path(kwargs['img_path']))
+        source_width = img.size[0]
+        source_height = img.size[1]
+        scale = lambda a,b,c: int(int(a) * float(b) / float(c))
+
+        # we are guaranteed to have either height or width which lets us take
+        # some validation shortcuts here. KeyErrors mean a fatal error, so just
+        # let em fly.
+        width = kwargs.get('width', scale(source_width, source_height, kwargs['height']))
+        height = kwargs.get('height', scale(source_height, source_width, kwargs['width']))
+
+        return self.scale({
+            'img': img,
+            'width': width,
+            'height': height,
+        })
+
+    @action
+    def scale(self, **kwargs):
+        """
+        Straight scale. Distortion will occur.
+
+        TODO
+        """
+        img = kwargs.get('img', self.get_pil_from_path(kwargs['img_path']))
+
+        width = kwargs['width']
+        height = kwargs['height']
+
+        if width > img.size[0]:
+            raise ValueError('No upscaling: %s > %s' % (width, img.size[0]))
+
+        if height > img.size[1]:
+            raise ValueError('No upscaling: %s > %s' % (height, img.size[1]))
+
+        return img.scale((width, height))
+
+    def get_pil_from_path(self, img_path):
+        """
+        given some path relative to MEDIA_ROOT, create a PIL Image and
+        return it.
+
+        :param img_path: a path to an image file relative to MEDIA_ROOT
+        :raises IOError: if image is not found
+        :return: PIL.Image
+        """
+        return Image.open(os.path.join(settings.MEDIA_ROOT, img_path))
 
     def get(self, request, action, geometry, source_path):
         """
@@ -158,18 +154,16 @@ class LazyThumbRenderer(View):
             logger.info("%s: bad action requested: %s" % (source_path, action))
             return self.four_oh_four()
 
-        source_path = os.path.join(settings.LAZYTHUMBS_SOURCE_PATH, source_path)
-
         try:
-            width,height = geometry.split('x')
-            width = int(width)
-            height = int(height)
-        except ValueError:
-            width = int(geometry)
-            height = None
+            width, height = geometry_parse(action, geometry, ValueError)
+        except ValueError, e:
+            logger.info('corrupted geometry "%s" for action "%s"' % (action, geometry))
+            return self.four_oh_four()
+
+        width = int(width) if width is not None else None
+        height = int(height) if height is not None else None
 
         rendered_path = self.generate_path(source_path, action, width, height)
-        rendered_path = os.path.join(settings.LAZYTHUMBS_SOURCE_PATH, rendered_path)
 
         cache_key = self.cache_key(source_path, action, width, height)
         was_404 = cache.get(cache_key)
