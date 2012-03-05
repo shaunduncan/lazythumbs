@@ -16,16 +16,12 @@ from django.template import TemplateSyntaxError, Library, Node, Variable
 from django.conf import settings
 from django.core.files.images import ImageFile
 
-from lazythumbs.util import scale_h_to_w
-
 SUPPORTED_ACTIONS = ['thumbnail', 'resize']
 
 register = Library()
 logger = logging.getLogger(__name__)
 
-tse = lambda m: TemplateSyntaxError('lazythumb: %s' % m)
-
-def geometry_parse(action, geo_str):
+def geometry_parse(action, geo_str, exc):
     if action == 'thumbnail':
         width_match = re.match('^(\d+)$', geo_str)
         height_match = re.match('^x(\d+)$', geo_str)
@@ -34,14 +30,14 @@ def geometry_parse(action, geo_str):
              height_match.groups[0] if height_match else None
         )
         if width is None and height is None:
-            raise tse('must supply either a height or a width for thumbnail')
+            raise exc('must supply either a height or a width for thumbnail')
 
         return width, height
 
     if action == 'resize':
         wh_match = re.match('^(\d+)x(\d+)', geo_str)
         if not wh_match:
-            raise tse('both width and height required for resize')
+            raise exc('both width and height required for resize')
         return wh_match.groups()
 
 
@@ -62,11 +58,12 @@ register.tag('lazythumb', lambda p,t: LazythumbNode(p,t))
 class LazythumbNode(Node):
     usage = 'Expected invocation is {% url|ImageFile|Object action geometry as variable %}'
     def __init__(self, parser, token):
+        tse = lambda m: TemplateSyntaxError('lazythumb: %s' % m)
         bits = token.contents.split()
         try:
            _, thing, action, geometry, _, as_var = bits
         except ValueError:
-            raise TemplateSyntaxError(self.usage)
+            raise tse(self.usage)
 
         self.as_var = as_var
 
@@ -77,7 +74,7 @@ class LazythumbNode(Node):
         self.thing = self.literal_or_var(thing)
         self.raw_geometry = self.literal_or_var(geometry)
         if type(self.raw_geometry) == type(''):
-            self.width, self.height = geometry_parse(self.action, self.raw_geometry)
+            self.width, self.height = geometry_parse(self.action, self.raw_geometry, TemplateSyntaxError)
 
         self.nodelist = parser.parse(('endlazythumb',))
         parser.delete_first_token()
@@ -106,12 +103,6 @@ class LazythumbNode(Node):
             context.pop()
             return output
 
-        # potentially resolve geometry
-        if type(self.raw_geometry) == Variable:
-            geometry = self.raw_geometry.resolve(context)
-        else:
-            geometry = self.raw_geometry
-
         # compute url
         img_object = None
         url = self.thing
@@ -126,29 +117,45 @@ class LazythumbNode(Node):
         # see if we got a fully qualified url
         if url.startswith('http'):
             url = url.replace(settings.MEDIA_URL, '')
-            #parsed = urlparse(url)
-            #path = parsed.path
-            ## TODO do we need to further operate on path? if not, collapse this into one call
-            #url = path
+            # last ditch attempt to get something
+            if url.startswith('http'):
+                url = urlparse(url).path
 
-        # early exit if didn't get a url or a usable geometry
-        if not url or not self.valid_geometry(geometry):
+        # extract/ensure width & height
+        # It's okay to end up with '' for one of the dimensions in the case of 
+        width, height = (getattr(self, a, '') for a in ('width', 'height'))
+        if not (width and height):
+            if type(self.raw_geometry) == Variable:
+                geometry = self.raw_geometry.resolve(context)
+            else:
+                geometry = self.raw_geometry
+
+            try:
+                width, height = geometry_parse(self.action, geometry, ValueError)
+            except ValueError, e:
+                logger.warn('got junk geometry variable resolution: %s' % e)
+
+        # early exit if didn't get a url or a usable geometry (depending on action)
+        if not url or
+                self.action == 'resize' and not (width and height) or
+                self.action == 'thumbnail' and not (width or height):
             return finish(url, source_width(img_object), source_height(img_object))
 
-        # parse geometry into width, height
-        if re.match('^\d+$', geometry):
-            width, height = (geometry, '')
-        else: # matches \d+x\d+
-            width, height = geometry.split('x')
-
-        # see if we can compute height
-        if not height and img_object:
-            s_h = source_height(img_object)
-            s_w = source_width(img_object)
-            if s_h and s_w:
-                height = scale_h_to_w(int(s_h), int(s_w), int(width))
-            else:
-                height = ''
+        # at this point we have our geo information as well as our action. if
+        # it's a thumbnail, we'll need to try and scale the original image's
+        # other dim to match our target dim.
+        # TODO puke
+        if self.action == 'thumbnail':
+            if img_object: # if we didn't get an obj there's nothing we can do
+                scale = lambda a, b, c: a * (b / c)
+                if not width:
+                    s_w = source_width(img_object)
+                    if s_w:
+                        width = scale(s_w, s_h, float(height))
+                if not height:
+                    s_h = source_height(img_object)
+                    if s_h:
+                        height = scale(s_h, s_w, float(width))
 
         # if it's possible to compute source dimensions there's a potential
         # early exit here. if we can tell the new image would have the
@@ -156,18 +163,23 @@ class LazythumbNode(Node):
         # special url for lazythumbs
         if img_object:
             s_w = source_width(img_object)
-            if s_w and int(width) >= int(s_w):
+            if (s_w and width) and int(width) >= int(s_w):
                 return finish(url, s_w, source_height(img_object))
             s_h = source_height(img_object)
-            if s_h and int(height) >= int(s_h):
+            if (s_h and height) and int(height) >= int(s_h):
                 return finish(url, s_w or source_width(img_object), s_h)
 
-        if width and height:
-            geometry = '%sx%s' % (width, height)
-        else:
-            geometry = width
+        # checking for presence of both width, height by passing a tuple to an
+        # anonymous dictionary (poor python dev's switch)
+        geometry_str = {
+            (True, True): '%sx%s' % (width, height),
+            (False, True): 'x%s' % height,
+            (True, False): width
+        }[(width is not None, height is not None)]
 
         src = '%s/lt/%s/%s/%s/' % (settings.LAZYTHUMBS_URL, self.action, geometry, url)
+
         if settings.LAZYTHUMBS_DUMMY:
             src = 'http://placekitten.com/%s/%s' % (width, height)
+
         return finish(src, width, height)
