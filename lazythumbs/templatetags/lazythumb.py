@@ -23,6 +23,27 @@ SUPPORTED_ACTIONS = ['thumbnail', 'resize']
 register = Library()
 logger = logging.getLogger(__name__)
 
+tse = lambda m: TemplateSyntaxError('lazythumb: %s' % m)
+
+def geometry_parse(action, geo_str):
+    if action == 'thumbnail':
+        width_match = re.match('^(\d+)$', geo_str)
+        height_match = re.match('^x(\d+)$', geo_str)
+        width, height = (
+             width_match.groups[0] if width_match else None,
+             height_match.groups[0] if height_match else None
+        )
+        if width is None and height is None:
+            raise tse('must supply either a height or a width for thumbnail')
+
+        return width, height
+
+    if action == 'resize':
+        wh_match = re.match('^(\d+)x(\d+)', geo_str)
+        if not wh_match:
+            raise tse('both width and height required for resize')
+        return wh_match.groups()
+
 
 def quack(thing, properties, levels=[], default=None):
     if thing is None:
@@ -50,16 +71,13 @@ class LazythumbNode(Node):
         self.as_var = as_var
 
         if action not in SUPPORTED_ACTIONS:
-            raise TemplateSyntaxError(
-                'lazythumb: supported actions are %s' % SUPPORTED_ACTIONS)
+            raise tse('supported actions are %s' % SUPPORTED_ACTIONS)
         self.action = action
 
         self.thing = self.literal_or_var(thing)
         self.raw_geometry = self.literal_or_var(geometry)
         if type(self.raw_geometry) == type(''):
-            if not self.valid_geometry(self.raw_geometry):
-                raise TemplateSyntaxError(
-                    "lazythumb: geometry must be like '48' or '48x100'")
+            self.width, self.height = geometry_parse(self.action, self.raw_geometry)
 
         self.nodelist = parser.parse(('endlazythumb',))
         parser.delete_first_token()
