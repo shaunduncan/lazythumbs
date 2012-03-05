@@ -18,7 +18,9 @@ from django.template import TemplateSyntaxError, Library, Node, Variable
 from django.conf import settings
 from django.core.files.images import ImageFile
 
-SUPPORTED_ACTIONS = ['thumbnail', 'resize']
+# TODO this should *not* be hardcoded. it completely prevents the proper
+# utilization of the subclassing feature of the renderer. A bug, imo.
+SUPPORTED_ACTIONS = ['thumbnail', 'resize', 'scale']
 
 register = Library()
 logger = logging.getLogger(__name__)
