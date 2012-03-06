@@ -6,10 +6,10 @@
 
 * add to INSTALLED\_APPS
 * configure:
- * **LAZYTHUMBS\_SOURCE** path to look in for requested images
  * **LAZYTHUMBS\_PREFIX** path to prepend to generated thumbnail files relative to LAZYTHUMBS\_SOURCE
  * **LAZYTHUMBS\_CACHE\_TIMEOUT** how long before a thumbnail gets regenerated
  * **LAZYTHUMBS\_CACHE\_404\_TIMEOUT** how long before a 404'd thumbnail request is retried
+ * **LAZYTHUMBS\_DUMMY** whether or not the lazythumb template tag just uses placekitten
 
 * add to urls.py
 
@@ -19,34 +19,46 @@
 
         mysite.com/lt/thumbnail/20x20/kitten.jpg/
 
+* use in a template
+
+        {% load lazythumb %}
+        {% lazythumb img_file scale '80x80' as img %}
+            <img src="{{img.src}}" width="{{img.width}}" height="{{img.height}}" alt="{{img_file.name}}" />
+        {% endlazythumb %}
+        {% lazythumb img_file resize '80x60' as img %}
+            <img src="{{img.src}}" width="{{img.width}}" height="{{img.height}}" alt="{{img_file.name}}" />
+        {% endlazythumb %}
+        {% lazythumb img_file thumbnail '80' as img %}
+            <img src="{{img.src}}" width="{{img.width}}" height="{{img.height}}" alt="{{img_file.name}}" />
+        {% endlazythumb %}
+
 ## summary
 
-lazythumbs acts as a thumbnailing proxy for images stored in
-LAZYTHUMBS\_SOURCE. It looks for the requested image and, if found,
-generates a thumbnail and writes it to the filesystem at LAZYTHUMBS\_SOURCE/LAZYTHUMBS\_PREFIX/. 
-The path to the generated
-thumbnail is cached, as is whether or not the request resulted in a 404 or not
-(to avoid getting hammered by repeated requests for images that don't exist).
+lazythumbs acts as a PIL proxy for images stored in
+MEDIA\_ROOT. It looks for the requested image and, if found,
+generates a new image and writes it to the filesystem at MEDIA\_ROOT/LAZYTHUMBS\_PREFIX/.
+If the request resulted in a 404 this is recorded in cache to avoid getting
+hammered by repeated requests for images that don't exist.
 
-At a high level, the flow for getting a thumbnail is:
 
-    GET /lt/thumbs/kitten.jpg/48/48/
-    LAZYTHUMBS_SOURCE/kitten.jpg path in cache?
-        was it a 404?
-            return a a 404.
-        else
-            does the thumbnail still exist on the fs?
-                serve it
-            else
-                generate, save, and serve it
-    else
-        LAZYTHUMBS_SOURCE/kitten.jpg exist on filesystem?
-            generate, save, serve thumbnail and cache path
-        else
-            return, cache 404
+## supported actions
 
-In the future actions besides thumbnail can be supported though slight
-refactoring and the addition of new views.
+* **scale** scale image to desired dimensions (no attention paid to ratio)
+* **thumbnail** scale in a single dimension (eg "80" or "x48")
+* **resize** thumbnail then center crop to desired dimensions
+
+## the template tag
+
+as its first argument the template tag accepts either a string or an object
+(and Variables pointing to either). If the argument is an object (say, an
+ImageFile) lazythumbs will introspect and hunt for width, height, and path
+properties at various levels under various names. This lets us compute ahead of
+time the intended width/height of the new image and provide it to the template
+context. This is nice: you can speed up page rendering by having your img tags
+use preset dimensions but you won't have to take the time to actually compute
+and save the new image at template render time. Django's ImageFile will hit the
+filesystem to get dimensions but caches them in memory: you'll only have to pay
+that cost once in your process.
 
 ## meta
 
