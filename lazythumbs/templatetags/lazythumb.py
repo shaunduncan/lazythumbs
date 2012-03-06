@@ -10,7 +10,7 @@ import logging
 import re
 from functools import partial
 from itertools import chain
-from urlparse import urlparse
+from urlparse import urlparse, urljoin
 
 from lazythumbs.util import geometry_parse
 
@@ -86,6 +86,7 @@ class LazythumbNode(Node):
             output = self.nodelist.render(context)
             context.pop()
             return output
+        early_exit = lambda u,w,h: finish(urljoin(settings.MEDIA_URL, u),w,h)
 
         # compute url
         img_object = None
@@ -123,7 +124,7 @@ class LazythumbNode(Node):
         if not url or \
                 (self.action == 'resize' and not (width and height)) or \
                 (self.action == 'thumbnail' and not (width or height)):
-            return finish(url, source_width(img_object), source_height(img_object))
+            return early_exit(url, source_width(img_object), source_height(img_object))
 
         # at this point we have our geo information as well as our action. if
         # it's a thumbnail, we'll need to try and scale the original image's
@@ -150,10 +151,10 @@ class LazythumbNode(Node):
         if img_object:
             s_w = source_width(img_object)
             if (s_w and width) and int(width) >= int(s_w):
-                return finish(url, s_w, source_height(img_object))
+                return early_exit(url, s_w, source_height(img_object))
             s_h = source_height(img_object)
             if (s_h and height) and int(height) >= int(s_h):
-                return finish(url, s_w or source_width(img_object), s_h)
+                return early_exit(url, s_w or source_width(img_object), s_h)
 
         # checking for presence of both width, height by passing a tuple to an
         # anonymous dictionary (poor python dev's switch)
