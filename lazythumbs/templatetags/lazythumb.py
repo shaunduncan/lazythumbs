@@ -80,8 +80,8 @@ class LazythumbNode(Node):
         source_height = lambda t: quack(t, ['height'], ['photo', 'image'], '')
         def finish(src, width, height):
             context.push()
-            if width: width = int(width)
-            if height: height = int(height)
+            width = int(width) if width else ''
+            height = int(height) if height else ''
             context[self.as_var] = dict(src=src, width=width, height=height)
             output = self.nodelist.render(context)
             context.pop()
@@ -164,7 +164,7 @@ class LazythumbNode(Node):
             (True, False): width
         }[(width is not None, height is not None)]
 
-        src = '%s/lt/%s/%s/%s/' % (settings.LAZYTHUMBS_URL, self.action, geometry, url)
+        src = '%s/lt/%s/%s/%s/' % (settings.LAZYTHUMBS_URL, self.action, geometry_str, url)
 
         if settings.LAZYTHUMBS_DUMMY:
             src = 'http://placekitten.com/%s/%s' % (width, height)
