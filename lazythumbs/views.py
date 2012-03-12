@@ -59,6 +59,12 @@ class LazyThumbRenderer(View):
         source_width = img.size[0]
         source_height = img.size[1]
 
+        if width > source_width or height > source_height:
+            return img
+
+        if width == source_width and height == source_height:
+            return img
+
         img = self.thumbnail(**{
             'img': img,
             'width': width if source_width < source_height else None,
@@ -93,6 +99,9 @@ class LazyThumbRenderer(View):
         # some validation shortcuts here.
         width = kwargs.get('width') or scale(source_width, kwargs.get('height'), source_height)
         height = kwargs.get('height') or scale(source_height, kwargs.get('width'), source_width)
+
+        if width >= source_width or height >= source_height:
+            return img
 
         return self.scale(**{
             'img': img,

@@ -14,7 +14,7 @@ def geometry_parse(action, geo_str, exc):
         return width, height
 
     if action in ('resize', 'scale'):
-        wh_match = re.match('^(\d+)x(\d+)', geo_str)
+        wh_match = re.match('^(\d+)x(\d+)$', geo_str)
         if not wh_match:
             raise exc('both width and height required for %s' % action)
         return wh_match.groups()

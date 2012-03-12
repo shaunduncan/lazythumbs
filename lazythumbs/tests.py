@@ -2,7 +2,7 @@ import json
 import re
 from unittest import TestCase
 
-from django.template import TemplateSyntaxError, VariableDoesNotExist
+from django.template import TemplateSyntaxError, VariableDoesNotExist, Variable
 
 from mock import Mock, patch
 
@@ -58,45 +58,10 @@ class RenderTest(TestCase):
         renderer = LazyThumbRenderer()
         mock_img = MockImg()
         mock_img.size = (100, 100)
-        mock_Image = Mock()
-        mock_Image.open = Mock(return_value=mock_img)
-        with patch('lazythumbs.views.Image', mock_Image):
-            img = renderer.thumbnail(**{'img_path':'i/p', 'width':100})
+        img = renderer.thumbnail(**{'img':mock_img, 'width':100})
         self.assertEqual(img.size[0], 100)
         self.assertEqual(img.size[1], 100)
         self.assertEqual(len(mock_img.called), 0)
-
-    def test_thumbnail_w_gt_h(self):
-        """
-        Test behavior of thumbnail action when width > height
-        """
-        renderer = LazyThumbRenderer()
-        mock_img = MockImg()
-        mock_img.size = (200, 100)
-        mock_Image = Mock()
-        mock_Image.open = Mock(return_value=mock_img)
-        with patch('lazythumbs.views.Image', mock_Image):
-            img = renderer.thumbnail(**{'img_path':'i/p', 'width':50})
-        self.assertEqual(img.size[0], 50)
-        self.assertEqual(len(mock_img.called), 2)
-        self.assertTrue('resize' in mock_img.called)
-        self.assertTrue('crop' in mock_img.called)
-
-    def test_thumbnail_h_gt_w(self):
-        """
-        Test behavior of thumbnail action when no height > width
-        """
-        renderer = LazyThumbRenderer()
-        mock_img = MockImg()
-        mock_img.size = (100, 200)
-        mock_Image = Mock()
-        mock_Image.open = Mock(return_value=mock_img)
-        with patch('lazythumbs.views.Image', mock_Image):
-            img = renderer.thumbnail(**{'img_path':'i/p', 'width':50})
-        self.assertEqual(len(mock_img.called), 2)
-        self.assertTrue('resize' in mock_img.called)
-        self.assertTrue('crop' in mock_img.called)
-        self.assertEqual(img.size[0], 50)
 
     def test_thumbnail_square(self):
         """
@@ -105,10 +70,7 @@ class RenderTest(TestCase):
         renderer = LazyThumbRenderer()
         mock_img = MockImg()
         mock_img.size = (100, 100)
-        mock_Image = Mock()
-        mock_Image.open = Mock(return_value=mock_img)
-        with patch('lazythumbs.views.Image', mock_Image):
-            img = renderer.thumbnail(**{'img_path':'i/p', 'width':50})
+        img = renderer.thumbnail(**{'img':mock_img, 'width':50})
         self.assertEqual(img.size[0], 50)
         self.assertEqual(img.size[1], 50)
         self.assertEqual(len(mock_img.called), 1)
@@ -121,16 +83,11 @@ class RenderTest(TestCase):
         renderer = LazyThumbRenderer()
         mock_img = MockImg()
         mock_img.size = (100, 100)
-        mock_Image = Mock()
-        mock_Image.open = Mock(return_value=mock_img)
-        with patch('lazythumbs.views.Image', mock_Image):
-            img = renderer.thumbnail(**{'img_path':'i/p', 'width':20000})
+        img = renderer.thumbnail(**{'img':mock_img, 'width':20000})
 
         self.assertEqual(img.size[0], 100)
         self.assertEqual(img.size[1], 100)
-        self.assertEqual(len(mock_img.called), 1)
-        self.assertTrue('resize' in mock_img.called)
-
+        self.assertEqual(len(mock_img.called), 0)
 
     def test_resize(self):
         """
@@ -138,13 +95,10 @@ class RenderTest(TestCase):
         """
         renderer = LazyThumbRenderer()
         mock_img = MockImg()
-        mock_Image = Mock()
-        mock_Image.open = Mock(return_value=mock_img)
-        with patch('lazythumbs.views.Image', mock_Image):
-            img = renderer.resize(**{'img_path':'i/p', 'width':48, 'height':50})
-        self.assertEqual(img.size[0], 48)
+        img = renderer.resize(**{'img':mock_img, 'width':48, 'height':50})
         self.assertEqual(img.size[1], 50)
-        self.assertEqual(len(mock_img.called), 1)
+        self.assertEqual(len(mock_img.called), 2)
+        self.assertTrue('crop' in mock_img.called)
         self.assertTrue('resize' in mock_img.called)
 
     def test_resize_no_upscaling(self):
@@ -153,15 +107,11 @@ class RenderTest(TestCase):
         """
         renderer = LazyThumbRenderer()
         mock_img = MockImg()
-        mock_Image = Mock()
-        mock_Image.open = Mock(return_value=mock_img)
-        with patch('lazythumbs.views.Image', mock_Image):
-            img = renderer.resize(**{'img_path':'i/p', 'width':2000, 'height':2000})
+        img = renderer.resize(**{'img':mock_img, 'width':2000, 'height':2000})
 
         self.assertEqual(img.size[0], 1000)
         self.assertEqual(img.size[1], 1000)
-        self.assertEqual(len(mock_img.called), 1)
-        self.assertTrue('resize' in mock_img.called)
+        self.assertEqual(len(mock_img.called), 0)
 
 class GetViewTest(TestCase):
     """ Test behavior of LazyThumbRenderer.get """
@@ -233,15 +183,15 @@ class GetViewTest(TestCase):
 
 
 class TemplateTagSyntaxTest(TestCase):
-    """ Test the arg validation and output of the template tag. """
+    """ Test the arg validation of the template tag. """
     def test_too_many_args(self):
         mt = Mock()
-        mt.contents = "tag url action 'geometry' as as_var extra"
+        mt.contents = "tag url resize '48x48' as as_var extra"
         self.assertRaises(TemplateSyntaxError, LazythumbNode, Mock(), mt)
 
     def test_too_few_args(self):
         mt = Mock()
-        mt.contents = "tag url action"
+        mt.contents = "tag url resize"
         self.assertRaises(TemplateSyntaxError, LazythumbNode, Mock(), mt)
 
     def test_invalid_action(self):
@@ -255,36 +205,54 @@ class TemplateTagSyntaxTest(TestCase):
 
     def test_url_var(self):
         node = node_factory("tag url resize '30x30' as as_var")
+        self.assertEqual(type(node.thing), Variable)
         self.assertEqual(node.thing.var, 'url')
 
 class TemplateTagGeometryCompileTest(TestCase):
-    """ test handling of geometry argument """
-    def test_invalid_geometry(self):
-        mt = Mock()
-        mt.contents = "tag url resize 'boom' as as_var"
-        self.assertRaises(TemplateSyntaxError, LazythumbNode, Mock(), mt)
+    """ test handling of geometry argument for each action """
 
-    def test_single_geo_str(self):
-        node = node_factory("tag url thumbnail '48' as as_var")
-        self.assertEqual(node.raw_geometry, '48')
+    def test_resize_invalid_geo_str(self):
+        invocation = "tag url resize 'boom' as as_var"
+        self.assertRaises(TemplateSyntaxError, node_factory, invocation)
+        invocation = "tag url resize '48' as as_var"
+        self.assertRaises(TemplateSyntaxError, node_factory, invocation)
+        invocation = "tag url resize 'x48' as as_var"
+        self.assertRaises(TemplateSyntaxError, node_factory, invocation)
+        invocation = "tag url resize '48x50x48' as as_var"
+        self.assertRaises(TemplateSyntaxError, node_factory, invocation)
+        invocation = "tag url resize '50x48x' as as_var"
+        self.assertRaises(TemplateSyntaxError, node_factory, invocation)
 
-    def test_double_geo_str(self):
-        node = node_factory("tag url thumbnail '50x50' as as_var")
-        self.assertEqual(node.raw_geometry, '50x50')
+    def test_resize_valid_geo_str(self):
+        node = node_factory("tag url resize '48x50' as as_var")
+        self.assertEqual(node.raw_geometry, '48x50')
+        self.assertEqual(node.width, '48')
+        self.assertEqual(node.height, '50')
+
+    def test_thumbnail_invalid_geo_str(self):
+        invocation = "tag url thumbnail 'boom' as as_var"
+        self.assertRaises(TemplateSyntaxError, node_factory, invocation)
+        invocation = "tag url thumbnail '48x50' as as_var"
+        self.assertRaises(TemplateSyntaxError, node_factory, invocation)
+        invocation = "tag url thumbnail '50x' as as_var"
+        self.assertRaises(TemplateSyntaxError, node_factory, invocation)
+        invocation = "tag url thumbnail 'x50x' as as_var"
+        self.assertRaises(TemplateSyntaxError, node_factory, invocation)
+
+    def test_thumbnail_valid_geo_str(self):
+        node = node_factory("tag url thumbnail 'x50' as as_var")
+        self.assertEqual(node.raw_geometry, 'x50')
+        self.assertEqual(node.width, None)
+        self.assertEqual(node.height, '50')
+        node = node_factory("tag url thumbnail '50' as as_var")
+        self.assertEqual(node.raw_geometry, '50')
+        self.assertEqual(node.width, '50')
+        self.assertEqual(node.height, None)
 
     def test_geo_var(self):
         node = node_factory("tag url thumbnail geo as as_var")
+        self.assertEqual(type(node.raw_geometry), Variable)
         self.assertEqual(node.raw_geometry.var, 'geo')
-
-    def test_invalid_3d_geo(self):
-        mt = Mock()
-        mt.contents = "tag url resize '43x34x34' as as_var"
-        self.assertRaises(TemplateSyntaxError, LazythumbNode, Mock(), mt)
-
-    def test_invalid_nonnumber_geo(self):
-        mt = Mock()
-        mt.contents = "tag url resize 'boom' as as_var"
-        self.assertRaises(TemplateSyntaxError, LazythumbNode, Mock(), mt)
 
 class TemplateTagRenderTest(TestCase):
     """ test behavior of template tag's output """
@@ -311,22 +279,84 @@ class TemplateTagRenderTest(TestCase):
 
     def test_valid_basic(self):
         """ ensure sanity in the simplest case """
-        node = node_factory("tag 'url' thumbnail '48x48' as img_tag")
+        node = node_factory("tag 'url' resize '48x50' as img_tag")
         node.render(self.mock_cxt)
 
+        self.assertTrue('img_tag' in self.context)
         img_tag = self.context['img_tag']
-        self.assertEqual(img_tag['height'], 48)
         self.assertEqual(img_tag['width'], 48)
+        self.assertEqual(img_tag['height'], 50)
         self.assertTrue('url' in img_tag['src'])
+
+    def test_resize_invalid_geo(self):
+        """
+        for a resize, if the geometry reference by the raw_geometry variable is
+        malformed, set width and height to None.
+        """
+        self.context['url'] = 'i/p'
+        node = node_factory("tag 'url' resize geo as img_tag")
+        for bad_geo in ['boom', '40', 'x40', '40x', '40x40x', '40x40x40']:
+            self.context['geo'] = bad_geo
+            node.render(self.mock_cxt)
+            img_tag = self.context['img_tag']
+            self.assertEqual(img_tag['width'], '')
+            self.assertEqual(img_tag['height'], '')
+
+    def test_thumbnail_invalid_geo(self):
+        """
+        for a thumbnail, if the geometry reference by the raw_geometry variable is
+        malformed, set width and height to None.
+        """
+        node = node_factory("tag 'url' thumbnail geo as img_tag")
+        for bad_geo in ['boom', '40x40', '40x40x40', '40x']:
+            self.context['geo'] = bad_geo
+            node.render(self.mock_cxt)
+            img_tag = self.context['img_tag']
+            self.assertEqual(img_tag['width'], '')
+            self.assertEqual(img_tag['height'], '')
+
+    def test_resize_valid_geo(self):
+        """
+        for a resize, check that width/height are set appropriately in the as
+        variable for a valid geometry Variable.
+        """
+        self.context['geo'] = '48x50'
+
+        node = node_factory("tag 'url' resize geo as img")
+        node.render(self.mock_cxt)
+
+        img = self.context['img']
+        self.assertEqual(img['width'], 48)
+        self.assertEqual(img['height'], 50)
+
+    def test_thumbnail_and_url_valid_geo(self):
+        """
+        for a thumbnail, check that width and/or height is set appropriately in
+        the as variable for a valid geometry Variable.
+        """
+        self.context['geo'] = 'x48'
+        node = node_factory("tag 'url' thumbnail geo as img")
+        node.render(self.mock_cxt)
+        self.assertTrue('img' in self.context)
+        img = self.context['img']
+        self.assertEqual(img['height'], 48)
 
     def test_invalid_geometry(self):
         """
         if the geometry reference by the raw_geometry variable is
         malformed, set width and height to None.
         """
-        node = node_factory("tag 'url' resize geo as img_tag")
         self.context['geo'] = 'boom'
         self.context['url'] = 'i/p'
+        node = node_factory("tag 'url' resize geo as img_tag")
+        node.render(self.mock_cxt)
+
+        img_tag = self.context['img_tag']
+        self.assertEqual(img_tag['height'], '')
+        self.assertEqual(img_tag['width'], '')
+        self.assertTrue('url' in img_tag['src'])
+
+        node = node_factory("tag 'url' thumbnail geo as img_tag")
         node.render(self.mock_cxt)
 
         img_tag = self.context['img_tag']
@@ -336,7 +366,7 @@ class TemplateTagRenderTest(TestCase):
 
     def test_valid_single_geo(self):
         """ test geo variable that resolves to a single number """
-        node = node_factory("tag 'url' resize geo as img_tag")
+        node = node_factory("tag 'url' thumbnail geo as img_tag")
         self.context['geo'] = '48'
         node.render(self.mock_cxt)
 
@@ -376,7 +406,7 @@ class TemplateTagRenderTest(TestCase):
         test behaviour for when url does not resolve to a string but rather
         an ImageFile like object.
         """
-        node = node_factory("tag img_file resize geo as img_tag")
+        node = node_factory("tag img_file thumbnail geo as img_tag")
         self.context['img_file'] = self.PseudoImageFile(100, 200)
         self.context['geo'] = '50'
         node.render(self.mock_cxt)
@@ -407,7 +437,7 @@ class TemplateTagRenderTest(TestCase):
         an object that nests an ImageFile-like object with no height. height
         should be scaled.
         """
-        node = node_factory("tag img_file resize geo as img_tag")
+        node = node_factory("tag img_file thumbnail geo as img_tag")
         self.context['img_file'] = self.PseudoPhoto(100, 200)
         self.context['geo'] = '50'
         node.render(self.mock_cxt)
