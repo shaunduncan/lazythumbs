@@ -58,7 +58,7 @@ class RenderTest(TestCase):
         renderer = LazyThumbRenderer()
         mock_img = MockImg()
         mock_img.size = (100, 100)
-        img = renderer.thumbnail(**{'img':mock_img, 'width':100})
+        img = renderer.thumbnail(width=100, img=mock_img)
         self.assertEqual(img.size[0], 100)
         self.assertEqual(img.size[1], 100)
         self.assertEqual(len(mock_img.called), 0)
@@ -70,7 +70,7 @@ class RenderTest(TestCase):
         renderer = LazyThumbRenderer()
         mock_img = MockImg()
         mock_img.size = (100, 100)
-        img = renderer.thumbnail(**{'img':mock_img, 'width':50})
+        img = renderer.thumbnail(width=50, img=mock_img)
         self.assertEqual(img.size[0], 50)
         self.assertEqual(img.size[1], 50)
         self.assertEqual(len(mock_img.called), 1)
@@ -83,7 +83,7 @@ class RenderTest(TestCase):
         renderer = LazyThumbRenderer()
         mock_img = MockImg()
         mock_img.size = (100, 100)
-        img = renderer.thumbnail(**{'img':mock_img, 'width':20000})
+        img = renderer.thumbnail(width=20000, img=mock_img)
 
         self.assertEqual(img.size[0], 100)
         self.assertEqual(img.size[1], 100)
@@ -95,7 +95,7 @@ class RenderTest(TestCase):
         """
         renderer = LazyThumbRenderer()
         mock_img = MockImg()
-        img = renderer.resize(**{'img':mock_img, 'width':48, 'height':50})
+        img = renderer.resize(width=48, height=50, img=mock_img)
         self.assertEqual(img.size[1], 50)
         self.assertEqual(len(mock_img.called), 2)
         self.assertTrue('crop' in mock_img.called)
@@ -107,7 +107,7 @@ class RenderTest(TestCase):
         """
         renderer = LazyThumbRenderer()
         mock_img = MockImg()
-        img = renderer.resize(**{'img':mock_img, 'width':2000, 'height':2000})
+        img = renderer.resize(width=2000, height=2000, img=mock_img)
 
         self.assertEqual(img.size[0], 1000)
         self.assertEqual(img.size[1], 1000)

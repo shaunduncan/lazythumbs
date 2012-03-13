@@ -141,7 +141,7 @@ class LazyThumbRenderer(View):
         :param img: a PIL Image object
         :returns: a PIL Image object
         """
-        img = img_path or self.get_pil_from_path(img_path)
+        img = img or self.get_pil_from_path(img_path)
         if not img:
             raise ValueError('unable to determine find img given args')
 
@@ -153,7 +153,7 @@ class LazyThumbRenderer(View):
 
         img = self.thumbnail(
             width = width if source_width < source_height else None,
-            height = height if source_height <= source_width else None
+            height = height if source_height <= source_width else None,
             img = img
         )
 
@@ -180,7 +180,7 @@ class LazyThumbRenderer(View):
         :param img: a PIL Image object
         :returns: a PIL Image object
         """
-        img = img_path or self.get_pil_from_path(img_path)
+        img = img or self.get_pil_from_path(img_path)
         if not img:
             raise ValueError('unable to determine find img given args')
         if width and height or width is None and height is None:
@@ -211,7 +211,7 @@ class LazyThumbRenderer(View):
         :param img: a PIL Image object
         :returns: a PIL Image object
         """
-        img = img_path or self.get_pil_from_path(img_path)
+        img = img or self.get_pil_from_path(img_path)
         if not img:
             raise ValueError('unable to determine find img given args')
 
