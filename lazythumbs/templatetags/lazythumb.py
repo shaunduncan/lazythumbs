@@ -164,7 +164,7 @@ class LazythumbNode(Node):
             (True, False): width
         }[(width is not None, height is not None)]
 
-        src = '%s/lt/%s/%s/%s/' % (settings.LAZYTHUMBS_URL, self.action, geometry_str, url)
+        src = '%s/lt/%s/%s/%s' % (settings.LAZYTHUMBS_URL, self.action, geometry_str, url)
 
         if settings.LAZYTHUMBS_DUMMY:
             src = 'http://placekitten.com/%s/%s' % (width, height)
