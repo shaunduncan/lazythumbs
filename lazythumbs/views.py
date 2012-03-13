@@ -21,7 +21,7 @@ logger = logging.getLogger(__name__)
 def action(fun):
     """
     Decorator used to denote an instance method as an action: a function
-    that takes a path to an image, performs PIL on it, and returns raw imag
+    that takes a path to an image, performs PIL on it, and returns raw image
     data.
     """
     fun.is_action = True

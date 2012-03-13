@@ -1,5 +1,5 @@
 """
-    {% lazythumb image.url thumbnail '48' as img_tag%}
+    {% lazythumb image.url thumbnail '48' as img_tag %}
         <img src="{{img_tag.src}}" width="{{img_tag.width}}" height="{{img_tag.height}} />
     {% endlazythumb %}
     {% lazythumb image.url resize '150x200' %}
@@ -26,6 +26,29 @@ register = Library()
 logger = logging.getLogger(__name__)
 
 def quack(thing, properties, levels=[], default=None):
+    """
+    Introspects object thing for the first property in properties at its top
+    level of attributes as well as at each level in levels. default is returned
+    if no such property is found. For example,
+
+    path = quack(photo_object, ['path', 'url', 'name'], ['photo'])
+    will check:
+        photo_object.path
+        photo_object.url
+        photo_object.name
+        photo_object.photo.path
+        photo_object.photo.url
+        photo_object.photo.name
+    and return the first attribute lookup that succeeds and default (which is
+    None by default) otherwise.
+
+    :param thing: An object
+    :param properties: A list of properties to look up ranked in order of preference.
+    :param levels: levels beyond the top level of attributes of thing to search for properties (optional, defaults to []).
+    :param default: What to return if the search is unsuccessful (optional, defaults to None)
+
+    :returns: either the a desired property or default.
+    """
     if thing is None:
         return default
     to_search = [thing] + filter(None, [getattr(thing,l,None) for l in levels])
@@ -42,6 +65,7 @@ register.tag('lazythumb', lambda p,t: LazythumbNode(p,t))
 class LazythumbNode(Node):
     usage = 'Expected invocation is {% url|ImageFile|Object action geometry as variable %}'
     def __init__(self, parser, token):
+        # simple alias
         tse = lambda m: TemplateSyntaxError('lazythumb: %s' % m)
         bits = token.contents.split()
         try:
@@ -63,7 +87,20 @@ class LazythumbNode(Node):
         self.nodelist = parser.parse(('endlazythumb',))
         parser.delete_first_token()
 
+    # TODO surely a helper exists for this in Django
     def literal_or_var(self, thing):
+        """
+        Given some string, return its value without quote delimiters or a
+        Variable object representing the string. For example,
+
+        a = self.literal_or_var('"hello"')
+            a is 'hello'
+        a = self.literal_or_var('hello')
+            a is Variable('hello')
+
+        :param thing: A string of the form "hello", 'hello', or hello
+        :returns: either a Variable or a string
+        """
         literal_re = '^[\'"].*[\'"]$'
         strip_quotes = lambda s: re.sub('[\'"]', '', s)
 
@@ -72,12 +109,12 @@ class LazythumbNode(Node):
         else:
             return Variable(thing)
 
-    def valid_geometry(self, string):
-        return re.match('^(?:\d+|\d+x\d+)$', string)
-
     def render(self, context):
+        # We use these lambdas to stay lazy: we don't ever want to look up
+        # source dimensions if we can avoid it.
         source_width = lambda t: quack(t, ['width'], ['photo', 'image'], '')
         source_height = lambda t: quack(t, ['height'], ['photo', 'image'], '')
+        # use a nested function to keep the logic simpler when early exiting
         def finish(src, width, height):
             context.push()
             width = int(width) if width else ''

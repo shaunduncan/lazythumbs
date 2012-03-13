@@ -8,7 +8,7 @@
 * configure:
  * **LAZYTHUMBS\_PREFIX** path to prepend to generated thumbnail files relative to LAZYTHUMBS\_SOURCE
  * **LAZYTHUMBS\_CACHE\_TIMEOUT** how long before a thumbnail gets regenerated
- * **LAZYTHUMBS\_CACHE\_404\_TIMEOUT** how long before a 404'd thumbnail request is retried
+ * **LAZYTHUMBS\_404\_CACHE\_TIMEOUT** how long before a 404'd thumbnail request is retried
  * **LAZYTHUMBS\_DUMMY** whether or not the lazythumb template tag just uses placekitten
 
 * add to urls.py
