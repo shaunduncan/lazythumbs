@@ -44,6 +44,88 @@ class LazyThumbRenderer(View):
             if type(a) == types.MethodType and getattr(a, 'is_action', False)
         ]
 
+    def get(self, request, action, geometry, source_path):
+        """
+        Perform action routing and handle sanitizing url input. Handles caching the path to a rendered image to
+        django.cache and saves the new image on the filesystem. 404s are cached to
+        save time the next time the missing image is requested.
+
+        :param request: HttpRequest
+        :param action: some action, eg thumbnail or resize
+        :param geometry: a string of either '\dx\d' or just '\d'
+        :param source_path: the fs path to the image to be manipulated
+        :returns: an HttpResponse with an image/jpeg content_type
+        """
+
+        # reject naughty paths and actions
+        if source_path.startswith('/'):
+            logger.info("%s: blocked bad path" % source_path)
+            return self.four_oh_four()
+        if re.match('\.\./', source_path):
+            logger.info("%s: blocked bad path" % source_path)
+            return self.four_oh_four()
+        if action not in self._allowed_actions:
+            logger.info("%s: bad action requested: %s" % (source_path, action))
+            return self.four_oh_four()
+
+        try:
+            width, height = geometry_parse(action, geometry, ValueError)
+        except ValueError, e:
+            logger.info('corrupted geometry "%s" for action "%s"' % (action, geometry))
+            return self.four_oh_four()
+
+        width = int(width) if width is not None else None
+        height = int(height) if height is not None else None
+
+        rendered_path = os.path.join(settings.MEDIA_ROOT, request.path)
+
+        cache_key = self.cache_key(source_path, action, width, height)
+        was_404 = cache.get(cache_key)
+
+        if was_404 == 1:
+            return self.four_oh_four()
+
+        # TODO this tangled mess of try/except is hideous... but such is
+        # filesystem io?
+        try:
+            # does rendered file already exist?
+            raw_data = self.fs.open(rendered_path).read()
+        except IOError:
+            if was_404 == 0:
+                # then it *was* here last time. if was_404 had been None then
+                # it makes sense for rendered image to not exist yet: we
+                # probably haven't seen it, or it dropped out of cache.
+                logger.info('rendered image previously on fs missing. regenerating')
+            try:
+                kwargs = dict(width=width, img_path=source_path, height=height)
+                pil_img = getattr(self, action)(**kwargs)
+                # this code from sorl-thumbnail
+                buf = StringIO()
+                params = {
+                    'format': 'JPEG',
+                    'optimize': 1,
+                    'progressive': True
+                }
+                try:
+                    pil_img.save(buf, **params)
+                except IOError:
+                    logger.info('failed to optimize jpeg, removing option')
+                    params.pop('optimize')
+                    pil_img.save(buf, **params)
+                raw_data = buf.getvalue()
+                buf.close()
+                self.fs.save(rendered_path, ContentFile(raw_data))
+            except (IOError, SuspiciousOperation), e:
+                # we've now failed to find a rendered path as well as the
+                # original source path. this is a 404.
+                logger.info('404: %s' % e)
+                cache.set(cache_key, 1, settings.LAZYTHUMBS_404_CACHE_TIMEOUT)
+                return self.four_oh_four()
+
+        cache.set(cache_key, 0, settings.LAZYTHUMBS_CACHE_TIMEOUT)
+
+        return self.two_hundred(raw_data)
+
     @action
     def resize(self, **kwargs):
         """
@@ -139,88 +221,6 @@ class LazyThumbRenderer(View):
         :return: PIL.Image
         """
         return Image.open(os.path.join(settings.MEDIA_ROOT, img_path))
-
-    def get(self, request, action, geometry, source_path):
-        """
-        Perform action routing and handle sanitizing url input. Handles caching the path to a rendered image to
-        django.cache and saves the new image on the filesystem. 404s are cached to
-        save time the next time the missing image is requested.
-
-        :param request: HttpRequest
-        :param action: some action, eg thumbnail or resize
-        :param geometry: a string of either '\dx\d' or just '\d'
-        :param source_path: the fs path to the image to be manipulated
-        :returns: an HttpResponse with an image/jpeg content_type
-        """
-
-        # reject naughty paths and actions
-        if source_path.startswith('/'):
-            logger.info("%s: blocked bad path" % source_path)
-            return self.four_oh_four()
-        if re.match('\.\./', source_path):
-            logger.info("%s: blocked bad path" % source_path)
-            return self.four_oh_four()
-        if action not in self._allowed_actions:
-            logger.info("%s: bad action requested: %s" % (source_path, action))
-            return self.four_oh_four()
-
-        try:
-            width, height = geometry_parse(action, geometry, ValueError)
-        except ValueError, e:
-            logger.info('corrupted geometry "%s" for action "%s"' % (action, geometry))
-            return self.four_oh_four()
-
-        width = int(width) if width is not None else None
-        height = int(height) if height is not None else None
-
-        rendered_path = self.generate_path(source_path, action, width, height)
-
-        cache_key = self.cache_key(source_path, action, width, height)
-        was_404 = cache.get(cache_key)
-
-        if was_404 == 1:
-            return self.four_oh_four()
-
-        # TODO this tangled mess of try/except is hideous... but such is
-        # filesystem io?
-        try:
-            # does rendered file already exist?
-            raw_data = self.fs.open(rendered_path).read()
-        except IOError:
-            if was_404 == 0:
-                # then it *was* here last time. if was_404 had been None then
-                # it makes sense for rendered image to not exist yet: we
-                # probably haven't seen it, or it dropped out of cache.
-                logger.info('rendered image previously on fs missing. regenerating')
-            try:
-                kwargs = dict(width=width, img_path=source_path, height=height)
-                pil_img = getattr(self, action)(**kwargs)
-                # this code from sorl-thumbnail
-                buf = StringIO()
-                params = {
-                    'format': 'JPEG',
-                    'optimize': 1,
-                    'progressive': True
-                }
-                try:
-                    pil_img.save(buf, **params)
-                except IOError:
-                    logger.info('failed to optimize jpeg, removing option')
-                    params.pop('optimize')
-                    pil_img.save(buf, **params)
-                raw_data = buf.getvalue()
-                buf.close()
-                self.fs.save(rendered_path, ContentFile(raw_data))
-            except (IOError, SuspiciousOperation), e:
-                # we've now failed to find a rendered path as well as the
-                # original source path. this is a 404.
-                logger.info('404: %s' % e)
-                cache.set(cache_key, 1, settings.LAZYTHUMBS_404_CACHE_TIMEOUT)
-                return self.four_oh_four()
-
-        cache.set(cache_key, 0, settings.LAZYTHUMBS_CACHE_TIMEOUT)
-
-        return self.two_hundred(raw_data)
 
     def generate_path(self, img_path, action, width, height):
         """
