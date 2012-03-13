@@ -63,7 +63,7 @@ def quack(thing, properties, levels=[], default=None):
 
 register.tag('lazythumb', lambda p,t: LazythumbNode(p,t))
 class LazythumbNode(Node):
-    usage = 'Expected invocation is {% url|ImageFile|Object action geometry as variable %}'
+    usage = 'Expected invocation is {% lazythumb url|ImageFile|Object action geometry as variable %}'
     def __init__(self, parser, token):
         # simple alias
         tse = lambda m: TemplateSyntaxError('lazythumb: %s' % m)

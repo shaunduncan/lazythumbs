@@ -97,8 +97,11 @@ class LazyThumbRenderer(View):
                 # probably haven't seen it, or it dropped out of cache.
                 logger.info('rendered image previously on fs missing. regenerating')
             try:
-                kwargs = dict(width=width, img_path=source_path, height=height)
-                pil_img = getattr(self, action)(**kwargs)
+                pil_img = getattr(self, action)(
+                    width=width,
+                    height=height,
+                    img_path=source_path
+                )
                 # this code from sorl-thumbnail
                 buf = StringIO()
                 params = {
@@ -115,7 +118,7 @@ class LazyThumbRenderer(View):
                 raw_data = buf.getvalue()
                 buf.close()
                 self.fs.save(rendered_path, ContentFile(raw_data))
-            except (IOError, SuspiciousOperation), e:
+            except (IOError, SuspiciousOperation, ValueError), e:
                 # we've now failed to find a rendered path as well as the
                 # original source path. this is a 404.
                 logger.info('404: %s' % e)
@@ -127,17 +130,21 @@ class LazyThumbRenderer(View):
         return self.two_hundred(raw_data)
 
     @action
-    def resize(self, **kwargs):
+    def resize(self, width, height, img_path=None, img=None):
         """
-        Thumbnail+center crop. Resize along larger dimension and then center crop to
-        meet smaller dimension.
+        Thumbnail and crop. Thumbnails along larger dimension and then center
+        crops to meet desired dimension.
 
-        TODO
+        :param width: desired width in pixels. required.
+        :param height: desired height in pixels. required.
+        :param img_path: a path to an image on the filesystem
+        :param img: a PIL Image object
+        :returns: a PIL Image object
         """
-        img = kwargs.get('img') or self.get_pil_from_path(kwargs['img_path'])
+        img = img_path or self.get_pil_from_path(img_path)
+        if not img:
+            raise ValueError('unable to determine find img given args')
 
-        width = kwargs['width']
-        height = kwargs['height']
         source_width = img.size[0]
         source_height = img.size[1]
 
@@ -147,11 +154,11 @@ class LazyThumbRenderer(View):
         if width == source_width and height == source_height:
             return img
 
-        img = self.thumbnail(**{
-            'img': img,
-            'width': width if source_width < source_height else None,
-            'height': height if source_height <= source_width else None
-        })
+        img = self.thumbnail(
+            width = width if source_width < source_height else None,
+            height = height if source_height <= source_width else None
+            img = img
+        )
 
         # see if we even have to crop
         if img.size == (width, height):
@@ -165,43 +172,51 @@ class LazyThumbRenderer(View):
         return img.crop((left, top, right, bottom))
 
     @action
-    def thumbnail(self, **kwargs):
+    def thumbnail(self, width=None, height=None, img_path=None, img=None):
         """
-        Scale in one dimension. Either width or height must be provided
-        in kwargs.
+        Scale in one dimension retaining image ratio in the other. Either width
+        or height is required.
 
-        TODO
+        :param width: desired width in pixels. mutually exclusive with height.
+        :param height: desired height in pixels. mutually exclusive with width
+        :param img_path: a path to an image on the filesystem
+        :param img: a PIL Image object
+        :returns: a PIL Image object
         """
-        img = kwargs.get('img') or self.get_pil_from_path(kwargs['img_path'])
+        img = img_path or self.get_pil_from_path(img_path)
+        if not img:
+            raise ValueError('unable to determine find img given args')
+        if width is None and height is None:
+            raise ValueError('thumbnail requires width XOR height; got (None, None)')
+
         source_width = img.size[0]
         source_height = img.size[1]
         scale = lambda a,b,c: int(int(a) * float(b) / float(c))
 
         # we are guaranteed to have either height or width which lets us take
         # some validation shortcuts here.
-        width = kwargs.get('width') or scale(source_width, kwargs.get('height'), source_height)
-        height = kwargs.get('height') or scale(source_height, kwargs.get('width'), source_width)
+        width = width or scale(source_width, height, source_height)
+        height = height or scale(source_height, width, source_width)
 
         if width >= source_width or height >= source_height:
             return img
 
-        return self.scale(**{
-            'img': img,
-            'width': width,
-            'height': height,
-        })
+        return self.scale(width, height, img=img)
 
     @action
-    def scale(self, **kwargs):
+    def scale(self, width, height, img_path=None, img=None):
         """
-        Straight scale. Distortion will occur.
+        Scale to desired dimensions paying no attention to ratio.
 
-        TODO
+        :param width: desired width in pixels. required.
+        :param height: desired height in pixels. required.
+        :param img_path: a path to an image on the filesystem
+        :param img: a PIL Image object
+        :returns: a PIL Image object
         """
-        img = kwargs.get('img') or self.get_pil_from_path(kwargs['img_path'])
-
-        width = kwargs['width']
-        height = kwargs['height']
+        img = img_path or self.get_pil_from_path(img_path)
+        if not img:
+            raise ValueError('unable to determine find img given args')
 
         if width > img.size[0]:
             width = img.size[0]
@@ -221,22 +236,6 @@ class LazyThumbRenderer(View):
         :return: PIL.Image
         """
         return Image.open(os.path.join(settings.MEDIA_ROOT, img_path))
-
-    def generate_path(self, img_path, action, width, height):
-        """
-        Return the path that the rendered form of this image would be saved to.
-        :param img_path: path to an image
-        :param action: an action method name
-        :param width: desired image width in pixels
-        :param height: desired image height in pixels
-
-        :returns: a path to a would-be rendered image
-        """
-        # TODO this method is only called once but might be useful in a script
-        # or elsewhere.
-        action_hash = self.hash_(img_path, action, width, height)
-        return os.path.join(settings.LAZYTHUMBS_PREFIX, action_hash[0:2],
-            action_hash[2:4], action_hash)
 
     def cache_key(self, img_path, action, width, height):
         """
