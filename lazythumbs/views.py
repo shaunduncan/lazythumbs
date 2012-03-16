@@ -71,13 +71,13 @@ class LazyThumbRenderer(View):
         try:
             width, height = geometry_parse(action, geometry, ValueError)
         except ValueError, e:
-            logger.info('corrupted geometry "%s" for action "%s"' % (action, geometry))
+            logger.info('corrupted geometry "%s" for action "%s"' % (geometry, action))
             return self.four_oh_four()
 
         width = int(width) if width is not None else None
         height = int(height) if height is not None else None
 
-        rendered_path = os.path.join(settings.MEDIA_ROOT, request.path)
+        rendered_path = request.path[1:]
 
         cache_key = self.cache_key(source_path, action, width, height)
         was_404 = cache.get(cache_key)
