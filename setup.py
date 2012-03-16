@@ -11,6 +11,10 @@ setup(
     url='https://github.com/coxmediagroup/lazythumbs',
     packages=find_packages(exclude=['tests', 'tests.*']),
     platforms='any',
+    install_requires = [
+        'django>1.3',
+        'PIL',
+    ],
     zip_safe=False,
     classifiers=[
         'Environment :: Web Environment',
