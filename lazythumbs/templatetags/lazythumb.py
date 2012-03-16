@@ -193,15 +193,7 @@ class LazythumbNode(Node):
             if (s_h and height) and int(height) >= int(s_h):
                 return early_exit(url, s_w or source_width(img_object), s_h)
 
-        # checking for presence of both width, height by passing a tuple to an
-        # anonymous dictionary (poor python dev's switch)
-        geometry_str = {
-            (True, True): '%sx%s' % (width, height),
-            (False, True): 'x%s' % height,
-            (True, False): width
-        }[(width is not None, height is not None)]
-
-        src = '%s/lt_cache/%s/%s/%s' % (settings.LAZYTHUMBS_URL, self.action, geometry_str, url)
+        src = '%s/lt_cache/%s/%s/%s' % (settings.LAZYTHUMBS_URL, self.action, geometry, url)
 
         if settings.LAZYTHUMBS_DUMMY:
             src = 'http://placekitten.com/%s/%s' % (width, height)
