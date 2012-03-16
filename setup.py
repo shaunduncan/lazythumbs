@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 setup(
     name='lazythumbs',
     version=lazythumbs.__version__,
-    description='render-on-request thumbnails for django using sorl-thumbnail',
+    description='render-on-request image manipulation for django',
     author='Nathaniel K Smith',
     author_email='nathanielksmith@gmail.com',
     license='BSD',
