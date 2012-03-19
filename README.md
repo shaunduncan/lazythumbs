@@ -6,18 +6,17 @@
 
 * add to INSTALLED\_APPS
 * configure:
- * **LAZYTHUMBS\_PREFIX** path to prepend to generated thumbnail files relative to LAZYTHUMBS\_SOURCE
  * **LAZYTHUMBS\_CACHE\_TIMEOUT** how long before a thumbnail gets regenerated
  * **LAZYTHUMBS\_404\_CACHE\_TIMEOUT** how long before a 404'd thumbnail request is retried
  * **LAZYTHUMBS\_DUMMY** whether or not the lazythumb template tag just uses placekitten
 
 * add to urls.py
 
-        (r'^lt/', include('lazythumbs.urls'))
+        (r'^lt_cache/', include('lazythumbs.urls'))
 
 * ask for a tiny kitten
 
-        mysite.com/lt/thumbnail/20x20/kitten.jpg/
+        mysite.com/lt_cache/thumbnail/20x20/kitten.jpg/
 
 * use in a template
 
@@ -36,7 +35,7 @@
 
 lazythumbs acts as a PIL proxy for images stored in
 MEDIA\_ROOT. It looks for the requested image and, if found,
-generates a new image and writes it to the filesystem at MEDIA\_ROOT/LAZYTHUMBS\_PREFIX/.
+generates a new image and writes it to the filesystem at MEDIA\_ROOT/lt\_cache.
 If the request resulted in a 404 this is recorded in cache to avoid getting
 hammered by repeated requests for images that don't exist.
 
