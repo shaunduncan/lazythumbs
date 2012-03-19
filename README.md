@@ -6,17 +6,18 @@
 
 * add to INSTALLED\_APPS
 * configure:
- * **LAZYTHUMBS\_CACHE\_TIMEOUT** how long before a thumbnail gets regenerated
  * **LAZYTHUMBS\_404\_CACHE\_TIMEOUT** how long before a 404'd thumbnail request is retried
+ * **LAZYTHUMBS\_CACHE\_TIMEOUT** how long before a thumbnail gets regenerated
  * **LAZYTHUMBS\_DUMMY** whether or not the lazythumb template tag just uses placekitten
+ * **LAZYTHUMBS\_URL** url prefix for lazythumb requests. used by template tag. (usually MEDIA\_URL or '')
 
 * add to urls.py
 
-        (r'^lt_cache/', include('lazythumbs.urls'))
+        (r'^lt/', include('lazythumbs.urls'))
 
 * ask for a tiny kitten
 
-        mysite.com/lt_cache/thumbnail/20x20/kitten.jpg/
+        mysite.com/lt/lt_cache/thumbnail/20x20/kitten.jpg/
 
 * use in a template
 
