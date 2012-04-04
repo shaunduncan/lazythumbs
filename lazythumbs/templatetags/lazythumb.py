@@ -16,7 +16,6 @@ from lazythumbs.util import geometry_parse
 
 from django.template import TemplateSyntaxError, Library, Node, Variable
 from django.conf import settings
-from django.core.files.images import ImageFile
 
 # TODO this should *not* be hardcoded. it completely prevents the proper
 # utilization of the subclassing feature of the renderer. A bug, imo.
@@ -155,7 +154,11 @@ class LazythumbNode(Node):
             try:
                 width, height = geometry_parse(self.action, geometry, ValueError)
             except ValueError, e:
+                # TODO: I Think we need to set width and height or this will crash with a ValueError if we try to float ''
                 logger.warn('got junk geometry variable resolution: %s' % e)
+        # TODO: CODEREVIEW THIS we seem to need geometry no matter what and I think this is what it should be
+        else:
+            geometry = "%sx%s" %(width, height)
 
         # early exit if didn't get a url or a usable geometry (depending on action)
         if not url or \
