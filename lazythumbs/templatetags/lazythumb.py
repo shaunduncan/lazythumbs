@@ -196,7 +196,7 @@ class LazythumbNode(Node):
             if (s_h and height) and int(height) >= int(s_h):
                 return early_exit(url, s_w or source_width(img_object), s_h)
 
-        src = '%s/lt_cache/%s/%s/%s' % (settings.LAZYTHUMBS_URL, self.action, geometry, url)
+        src = '%slt_cache/%s/%s/%s' % (getattr(settings, 'LAZYTHUMBS_URL', '/'), self.action, geometry, url)
 
         if settings.LAZYTHUMBS_DUMMY:
             src = 'http://placekitten.com/%s/%s' % (width, height)
