@@ -198,7 +198,7 @@ class LazythumbNode(Node):
 
         src = '%slt_cache/%s/%s/%s' % (getattr(settings, 'LAZYTHUMBS_URL', '/'), self.action, geometry, url)
 
-        if settings.LAZYTHUMBS_DUMMY:
+        if getattr(settings, 'LAZYTHUMBS_DUMMY', False):
             src = 'http://placekitten.com/%s/%s' % (width, height)
 
         return finish(src, width, height)
