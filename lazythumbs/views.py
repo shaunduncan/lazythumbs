@@ -112,8 +112,11 @@ class LazyThumbRenderer(View):
                 try:
                     pil_img.save(buf, **params)
                 except IOError:
-                    logger.info('failed to optimize jpeg, removing option')
+                    # TODO this seems to be happening when the image is too large for the buffer.
+                    # We should probably ask permission in this case.
+                    logger.info("failed to optimize or progressive jpeg perhaps it's too big, removing option")
                     params.pop('optimize')
+                    params.pop('progressive')
                     pil_img.save(buf, **params)
                 raw_data = buf.getvalue()
                 buf.close()
