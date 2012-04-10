@@ -16,7 +16,7 @@ from PIL import Image
 
 from lazythumbs.util import geometry_parse
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger('lazythumbs')
 
 def action(fun):
     """

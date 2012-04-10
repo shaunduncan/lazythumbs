@@ -22,7 +22,7 @@ from django.conf import settings
 SUPPORTED_ACTIONS = ['thumbnail', 'resize', 'scale']
 
 register = Library()
-logger = logging.getLogger(__name__)
+logger = logging.getLogger()
 
 def quack(thing, properties, levels=[], default=None):
     """
