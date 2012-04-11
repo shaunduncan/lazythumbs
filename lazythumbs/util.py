@@ -71,7 +71,7 @@ def compute_img(thing, action, geometry):
     # source dimensions if we can avoid it.
     source_width = lambda t: quack(t, ['width'], ['photo', 'image'], '')
     source_height = lambda t: quack(t, ['height'], ['photo', 'image'], '')
-    exit = lambda u,w,h: dict(url=urljoin(settings.MEDIA_URL, u), width=w,height=h)
+    exit = lambda u,w,h: dict(src=urljoin(settings.MEDIA_URL, u), width=str(w or '') ,height= str(h or ''))
 
     # compute url
     img_object = None
@@ -81,26 +81,25 @@ def compute_img(thing, action, geometry):
         img_object = thing
         url = quack(img_object, ['name', 'url', 'path'], ['photo', 'image'])
 
+    # early exit if didn't get a url
+    if not url:
+        return exit(url, source_width(img_object), source_height(img_object))
+
     # see if we got a fully qualified url
     if url.startswith('http'):
         url = url.replace(settings.MEDIA_URL, '')
-        # last ditch attempt to get something
+        # We have no way to thumbnail this
         if url.startswith('http'):
-            url = urlparse(url).path
+            return dict(url=url, width='', height='')
 
     # extract/ensure width & height
-    # It's okay to end up with '' for one of the dimensions in the case of 
+    # It's okay to end up with '' for one of the dimensions in the case of thumbnail
     try:
         width, height = geometry_parse(action, geometry, ValueError)
     except ValueError, e:
+        return exit(url, source_width(img_object), source_height(img_object))
         # TODO: I Think we need to set width and height or this will crash with a ValueError if we try to float ''
         logger.warn('got junk geometry variable resolution: %s' % e)
-
-    # early exit if didn't get a url or a usable geometry (depending on action)
-    if not url or \
-            (action == 'resize' and not (width and height)) or \
-            (action == 'thumbnail' and not (width or height)):
-        return exit(url, source_width(img_object), source_height(img_object))
 
     # at this point we have our geo information as well as our action. if
     # it's a thumbnail, we'll need to try and scale the original image's
@@ -108,17 +107,17 @@ def compute_img(thing, action, geometry):
     # TODO puke
     if action == 'thumbnail':
         if img_object: # if we didn't get an obj there's nothing we can do
-            scale = lambda a, b, c: a * (b / c)
+            scale = lambda a, b, c: int(a * (float(b) / c))
             if not width:
                 s_w = source_width(img_object)
                 s_h = source_height(img_object)
                 if s_w:
-                    width = scale(s_w, float(height), s_h)
+                    width = scale(s_w, height, s_h)
             if not height:
                 s_w = source_width(img_object)
                 s_h = source_height(img_object)
                 if s_h:
-                    height = scale(s_h, float(width), s_w)
+                    height = scale(s_h, width, s_w)
 
     # if it's possible to compute source dimensions there's a potential
     # early exit here. if we can tell the new image would have the

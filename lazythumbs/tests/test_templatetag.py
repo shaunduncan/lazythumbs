@@ -44,12 +44,14 @@ class TemplateTagGeometryCompileTest(TestCase):
 
     def test_geo_var(self):
         node = node_factory("tag url thumbnail geo as as_var")
-        self.assertEqual(type(node.raw_geometry), Variable)
-        self.assertEqual(node.raw_geometry.var, 'geo')
+        self.assertEqual(type(node.geometry), Variable)
+        self.assertEqual(node.geometry.var, 'geo')
 
-class TemplateTagRenderTest(object):
+class TemplateTagRenderTest(TestCase):
     """ test behavior of template tag's output """
     def setUp(self):
+
+        # NOTE this context will not push and pop so we can inspect it
         self.context = {}
         mock_cxt = Mock()
         mock_cxt.__getitem__ = lambda _,x: self.context[x]
@@ -77,8 +79,8 @@ class TemplateTagRenderTest(object):
 
         self.assertTrue('img_tag' in self.context)
         img_tag = self.context['img_tag']
-        self.assertEqual(img_tag['width'], 48)
-        self.assertEqual(img_tag['height'], 50)
+        self.assertEqual(img_tag['width'], '48')
+        self.assertEqual(img_tag['height'], '50')
         print img_tag['src']
         self.assertTrue('url' in img_tag['src'])
 
@@ -120,8 +122,8 @@ class TemplateTagRenderTest(object):
         node.render(self.mock_cxt)
 
         img = self.context['img']
-        self.assertEqual(img['width'], 48)
-        self.assertEqual(img['height'], 50)
+        self.assertEqual(img['width'], '48')
+        self.assertEqual(img['height'], '50')
 
     def test_thumbnail_and_url_valid_geo(self):
         """
@@ -133,7 +135,7 @@ class TemplateTagRenderTest(object):
         node.render(self.mock_cxt)
         self.assertTrue('img' in self.context)
         img = self.context['img']
-        self.assertEqual(img['height'], 48)
+        self.assertEqual(img['height'], '48')
 
     def test_invalid_geometry(self):
         """
@@ -165,7 +167,7 @@ class TemplateTagRenderTest(object):
         node.render(self.mock_cxt)
 
         img_tag = self.context['img_tag']
-        self.assertEqual(img_tag['width'], 48)
+        self.assertEqual(img_tag['width'], '48')
         self.assertEqual(img_tag['height'], '')
         self.assertTrue('url' in img_tag['src'])
 
@@ -176,8 +178,8 @@ class TemplateTagRenderTest(object):
         node.render(self.mock_cxt)
 
         img_tag = self.context['img_tag']
-        self.assertEqual(img_tag['width'], 48)
-        self.assertEqual(img_tag['height'], 100)
+        self.assertEqual(img_tag['width'], '48')
+        self.assertEqual(img_tag['height'], '100')
         self.assertTrue('url' in img_tag['src'])
 
     def test_thing_like_IF_introspection_noop(self):
@@ -191,8 +193,8 @@ class TemplateTagRenderTest(object):
         node.render(self.mock_cxt)
 
         img_tag = self.context['img_tag']
-        self.assertEqual(img_tag['width'], 1000)
-        self.assertEqual(img_tag['height'], 500)
+        self.assertEqual(img_tag['width'], '1000')
+        self.assertEqual(img_tag['height'], '500')
         self.assertTrue('image_path' in img_tag['src'])
 
     def test_thing_like_IF_introspection_no_height(self):
@@ -206,8 +208,8 @@ class TemplateTagRenderTest(object):
         node.render(self.mock_cxt)
 
         img_tag = self.context['img_tag']
-        self.assertEqual(img_tag['width'], 50)
-        self.assertEqual(img_tag['height'], 100)
+        self.assertEqual(img_tag['width'], '50')
+        self.assertEqual(img_tag['height'], '100')
         self.assertTrue('image_path' in img_tag['src'])
 
     def test_thing_like_photo_introspection_noop(self):
@@ -221,8 +223,8 @@ class TemplateTagRenderTest(object):
         node.render(self.mock_cxt)
 
         img_tag = self.context['img_tag']
-        self.assertEqual(img_tag['width'], 1000)
-        self.assertEqual(img_tag['height'], 500)
+        self.assertEqual(img_tag['width'], '1000')
+        self.assertEqual(img_tag['height'], '500')
         self.assertTrue('image_path' in img_tag['src'])
 
     def test_thing_like_photo_introspection_no_height(self):
@@ -237,8 +239,8 @@ class TemplateTagRenderTest(object):
         node.render(self.mock_cxt)
 
         img_tag = self.context['img_tag']
-        self.assertEqual(img_tag['width'], 50)
-        self.assertEqual(img_tag['height'], 100)
+        self.assertEqual(img_tag['width'], '50')
+        self.assertEqual(img_tag['height'], '100')
         self.assertTrue('image_path' in img_tag['src'])
 
     def test_render_url_var_is_str(self):
@@ -247,8 +249,8 @@ class TemplateTagRenderTest(object):
         node.render(self.mock_cxt)
 
         img_tag = self.context['img_tag']
-        self.assertEqual(img_tag['width'], 30)
-        self.assertEqual(img_tag['height'], 100)
+        self.assertEqual(img_tag['width'], '30')
+        self.assertEqual(img_tag['height'], '100')
         self.assertTrue('some_url' in img_tag['src'])
 
     def test_render_no_url(self):

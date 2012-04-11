@@ -39,7 +39,7 @@ class LazythumbNode(Node):
         self.action = action
 
         self.thing = self.literal_or_var(thing)
-        self.raw_geometry = self.literal_or_var(geometry)
+        self.geometry = self.literal_or_var(geometry)
 
         self.nodelist = parser.parse(('endlazythumb',))
         parser.delete_first_token()
