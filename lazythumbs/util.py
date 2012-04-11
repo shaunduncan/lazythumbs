@@ -137,3 +137,16 @@ def compute_img(thing, action, geometry):
         src = 'http://placekitten.com/%s/%s' % (width, height)
 
     return exit(src, width, height)
+
+def get_url(thing, action, width='', height=''):
+    """ allows us to get a url easier outside of templates
+        this just lets compute_img deal with invalid geometries
+        TODO: compute_img should just take width/height
+    """
+    if width and height:
+        geometry = "%sx%s" %(width, height)
+    elif width:
+        geometry = str(width)
+    else:
+        geometry = str(width or "invalid_geo")
+    return compute_img(thing, action, geometry)['src']
