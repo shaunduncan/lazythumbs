@@ -42,50 +42,12 @@ class TemplateTagSyntaxTest(TestCase):
 class TemplateTagGeometryCompileTest(TestCase):
     """ test handling of geometry argument for each action """
 
-    def test_resize_invalid_geo_str(self):
-        invocation = "tag url resize 'boom' as as_var"
-        self.assertRaises(TemplateSyntaxError, node_factory, invocation)
-        invocation = "tag url resize '48' as as_var"
-        self.assertRaises(TemplateSyntaxError, node_factory, invocation)
-        invocation = "tag url resize 'x48' as as_var"
-        self.assertRaises(TemplateSyntaxError, node_factory, invocation)
-        invocation = "tag url resize '48x50x48' as as_var"
-        self.assertRaises(TemplateSyntaxError, node_factory, invocation)
-        invocation = "tag url resize '50x48x' as as_var"
-        self.assertRaises(TemplateSyntaxError, node_factory, invocation)
-
-    def test_resize_valid_geo_str(self):
-        node = node_factory("tag url resize '48x50' as as_var")
-        self.assertEqual(node.raw_geometry, '48x50')
-        self.assertEqual(node.width, '48')
-        self.assertEqual(node.height, '50')
-
-    def test_thumbnail_invalid_geo_str(self):
-        invocation = "tag url thumbnail 'boom' as as_var"
-        self.assertRaises(TemplateSyntaxError, node_factory, invocation)
-        invocation = "tag url thumbnail '48x50' as as_var"
-        self.assertRaises(TemplateSyntaxError, node_factory, invocation)
-        invocation = "tag url thumbnail '50x' as as_var"
-        self.assertRaises(TemplateSyntaxError, node_factory, invocation)
-        invocation = "tag url thumbnail 'x50x' as as_var"
-        self.assertRaises(TemplateSyntaxError, node_factory, invocation)
-
-    def test_thumbnail_valid_geo_str(self):
-        node = node_factory("tag url thumbnail 'x50' as as_var")
-        self.assertEqual(node.raw_geometry, 'x50')
-        self.assertEqual(node.width, None)
-        self.assertEqual(node.height, '50')
-        node = node_factory("tag url thumbnail '50' as as_var")
-        self.assertEqual(node.raw_geometry, '50')
-        self.assertEqual(node.width, '50')
-        self.assertEqual(node.height, None)
-
     def test_geo_var(self):
         node = node_factory("tag url thumbnail geo as as_var")
         self.assertEqual(type(node.raw_geometry), Variable)
         self.assertEqual(node.raw_geometry.var, 'geo')
 
-class TemplateTagRenderTest(TestCase):
+class TemplateTagRenderTest(object):
     """ test behavior of template tag's output """
     def setUp(self):
         self.context = {}
