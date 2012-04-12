@@ -9,7 +9,7 @@ logger = logging.getLogger()
 
 
 
-def geometry_parse(self, action, geometry, exc):
+def geometry_parse(action, geometry, exc):
     """ Compute width and height from a geometry string
         This is really unpleasant the actions should themselves take care of this
         for now however everything requires a width or a height. the exc will be raises
