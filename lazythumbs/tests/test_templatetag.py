@@ -91,7 +91,7 @@ class TemplateTagRenderTest(TestCase):
         """
         self.context['url'] = 'i/p'
         node = node_factory("tag 'url' resize geo as img_tag")
-        for bad_geo in ['boom', '40', 'x40', '40x', '40x40x', '40x40x40']:
+        for bad_geo in ['boom', '40x', '40x40x', '40x40x40']:
             self.context['geo'] = bad_geo
             node.render(self.mock_cxt)
             img_tag = self.context['img_tag']
@@ -104,7 +104,7 @@ class TemplateTagRenderTest(TestCase):
         malformed, set width and height to None.
         """
         node = node_factory("tag 'url' thumbnail geo as img_tag")
-        for bad_geo in ['boom', '40x40', '40x40x40', '40x']:
+        for bad_geo in ['boom', '40x40x40', '40x']:
             self.context['geo'] = bad_geo
             node.render(self.mock_cxt)
             img_tag = self.context['img_tag']

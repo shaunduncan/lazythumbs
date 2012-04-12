@@ -22,11 +22,11 @@ def geometry_parse(action, geometry, exc):
     width_match = re.match(r'^(\d+)(?:x\d+)?$', geometry)
     height_match = re.match(r'^(?:\d+)?x(\d+)$', geometry)
 
-    if not width_match or height_match:
+    if not (width_match or height_match):
         raise exc
 
-    width = int(width_match.groups()[0]) if width_match.groups()[0] else None
-    height = int(height_match.groups()[0]) if height_match.groups()[0] else None
+    width = int(width_match.groups()[0]) if width_match else None
+    height = int(height_match.groups()[0]) if height_match else None
 
     if not (width or height) and not action == 'thumbnail':
         height = width or height
