@@ -11,8 +11,6 @@ class TestGeometry(TestCase):
 
     def test_invalid_resize(self):
         self.assertRaises(self.TestException, geometry_parse, "resize", "boom", self.TestException)
-        self.assertRaises(self.TestException, geometry_parse, "resize", "48", self.TestException)
-        self.assertRaises(self.TestException, geometry_parse, "resize", "x48", self.TestException)
         self.assertRaises(self.TestException, geometry_parse, "resize", "45x34x", self.TestException)
 
     def test_valid_resize(self):

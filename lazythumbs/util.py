@@ -7,24 +7,41 @@ from django.conf import settings
 
 logger = logging.getLogger()
 
-def geometry_parse(action, geo_str, exc):
-    if action == 'thumbnail':
-        width_match = re.match('^(\d+)$', geo_str)
-        height_match = re.match('^x(\d+)$', geo_str)
-        width, height = (
-             width_match.groups()[0] if width_match else None,
-             height_match.groups()[0] if height_match else None
-        )
-        if width is None and height is None:
-            raise exc('must supply either a height or a width for thumbnail')
 
-        return width, height
 
-    if action in ('resize', 'scale'):
-        wh_match = re.match('^(\d+)x(\d+)$', geo_str)
-        if not wh_match:
-            raise exc('both width and height required for %s' % action)
-        return wh_match.groups()
+def geometry_parse(self, action, geometry, exc):
+    """ Compute width and height from a geometry string
+        This is really unpleasant the actions should themselves take care of this
+        for now however everything requires a width or a height. the exc will be raises
+        if neither can be parsed out of the string.
+
+        thumbnail:  returns None for nonexistant dimensions
+        resize/scale: if only one dimension is given the other is set to match it
+    """
+
+    width_match = re.match(r'^(\d+)(?:x\d+)?$', geometry)
+    height_match = re.match(r'^(?:\d+)?x(\d+)$', geometry)
+
+    if not width_match or height_match:
+        raise exc
+
+    width = int(width_match.groups()[0]) if width_match.groups()[0] else None
+    height = int(height_match.groups()[0]) if height_match.groups()[0] else None
+
+    if not (width or height) and not action == 'thumbnail':
+        height = width or height
+        width = width or height
+
+    return width, height
+
+
+def build_geometry(width, height):
+    """ this builds a canonical geometry so we don't create the same image twice """
+    if width and height:
+        return "%sx%s" %(width, height)
+    if not width:
+        return "x%s" % height
+    return str(width)
 
 
 def quack(thing, properties, levels=[], default=None):
@@ -146,5 +163,5 @@ def get_img_url(thing, action, width='', height=''):
     if width and not height:
         geometry = str(width)
     else:
-        geometry = "%sx%s" %(width, height)
+        geometry = "%sx%s" %(width or '', height)
     return compute_img(thing, action, geometry)['src']
