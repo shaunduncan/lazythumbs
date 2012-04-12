@@ -1,7 +1,7 @@
 import re, logging
 from functools import partial
 from itertools import chain
-from urlparse import urlparse, urljoin
+from urlparse import urljoin
 
 from django.conf import settings
 
@@ -155,7 +155,14 @@ def compute_img(thing, action, geometry):
 
     return exit(src, width, height)
 
-def get_img_url(thing, action, width='', height=''):
+def get_img_url(thing, action, width=None, height=None):
+    """ return only the src.
+        This largely exists because I'm in a hurry and
+        don't want to fix things that are using this
+    """
+    return get_img_attrs(thing, action, width, height)['src']
+
+def get_img_attrs(thing, action, width='', height=''):
     """ allows us to get a url easier outside of templates
         this just lets compute_img deal with invalid geometries
         TODO: compute_img should just take width/height
@@ -164,4 +171,4 @@ def get_img_url(thing, action, width='', height=''):
         geometry = str(width)
     else:
         geometry = "%sx%s" %(width or '', height)
-    return compute_img(thing, action, geometry)['src']
+    return compute_img(thing, action, geometry)
