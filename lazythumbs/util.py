@@ -148,6 +148,8 @@ def compute_img(thing, action, geometry):
         if (s_h and height) and int(height) >= int(s_h):
             return exit(url, s_w or source_width(img_object), s_h)
 
+
+    geometry = build_geometry(width, height)
     src = '%slt_cache/%s/%s/%s' % (getattr(settings, 'LAZYTHUMBS_URL', '/'), action, geometry, url)
 
     if getattr(settings, 'LAZYTHUMBS_DUMMY', False):
