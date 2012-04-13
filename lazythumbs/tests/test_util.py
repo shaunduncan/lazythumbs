@@ -1,7 +1,7 @@
 from unittest import TestCase
-from mock import Mock, patch
+from mock import patch
 
-from lazythumbs.util import geometry_parse, get_img_attrs
+from lazythumbs.util import geometry_parse, build_geometry, get_img_attrs
 
 
 class TestGeometry(TestCase):
@@ -33,6 +33,10 @@ class TestGeometry(TestCase):
     def test_invalid_scale(self):
         self.assertRaises(self.TestException, geometry_parse, "scale", "boom", self.TestException)
 
+    def test_build_geo(self):
+        self.assertEqual(build_geometry(10, 20), "10x20")
+        self.assertEqual(build_geometry(10, None), "10")
+        self.assertEqual(build_geometry(None, 20), "x20")
 
 class TestGetImgAttrs(TestCase):
     @patch('lazythumbs.util.compute_img')
