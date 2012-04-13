@@ -1,7 +1,7 @@
 from unittest import TestCase
-from mock import Mock
+from mock import Mock, patch
 
-from lazythumbs.util import geometry_parse
+from lazythumbs.util import geometry_parse, get_img_attrs
 
 
 class TestGeometry(TestCase):
@@ -32,3 +32,20 @@ class TestGeometry(TestCase):
 
     def test_invalid_scale(self):
         self.assertRaises(self.TestException, geometry_parse, "scale", "boom", self.TestException)
+
+
+class TestGetImgAttrs(TestCase):
+    @patch('lazythumbs.util.compute_img')
+    def test_no_height(self, mock_ci):
+        get_img_attrs('url', 'noaction', 10)
+        self.assertEqual(mock_ci.call_args[0][2], '10')
+
+    @patch('lazythumbs.util.compute_img')
+    def test_no_width(self, mock_ci):
+        get_img_attrs('url', 'noaction', height=10)
+        self.assertEqual(mock_ci.call_args[0][2], 'x10')
+
+    @patch('lazythumbs.util.compute_img')
+    def test_both_dimensions(self, mock_ci):
+        get_img_attrs('url', 'noaction', 10, 20)
+        self.assertEqual(mock_ci.call_args[0][2], '10x20')
