@@ -1,7 +1,7 @@
 import re, logging
 from functools import partial
 from itertools import chain
-from urlparse import urljoin
+from urlparse import urljoin, urlparse
 
 from django.conf import settings
 
@@ -81,13 +81,26 @@ def quack(thing, properties, levels=[], default=None):
     return default
 
 
+def get_img_object_url(thing):
+    img_object = None
+    if type(thing) == type(''):
+        url = thing
+    else:
+        img_object = thing
+        url = quack(img_object, ['name', 'url', 'path'], ['photo', 'image'],'')
+
+    url.replace(settings.MEDIA_URL, '')
+
+    return img_object, url
+
+
 def compute_img(thing, action, geometry):
     """ generate a src url, width and height tuple for given object or url"""
 
     # We use these lambdas to stay lazy: we don't ever want to look up
     # source dimensions if we can avoid it.
-    source_width = lambda t: quack(t, ['width'], ['photo', 'image'], '')
-    source_height = lambda t: quack(t, ['height'], ['photo', 'image'], '')
+    source_width = lambda t: quack(t, ['width'], ['photo', 'image'])
+    source_height = lambda t: quack(t, ['height'], ['photo', 'image'])
     exit = lambda u,w,h: dict(src=urljoin(settings.MEDIA_URL, u), width=str(w or '') ,height= str(h or ''))
 
     # compute url
@@ -96,27 +109,25 @@ def compute_img(thing, action, geometry):
         url = thing
     else:
         img_object = thing
-        url = quack(img_object, ['name', 'url', 'path'], ['photo', 'image'])
+        url = quack(img_object, ['name', 'url', 'path'], ['photo', 'image'],'')
+    url = url.replace(settings.MEDIA_URL, '')
 
     # early exit if didn't get a url
     if not url:
-        return exit(url, source_width(img_object), source_height(img_object))
+        return dict(src='', width='', height='')
 
-    # see if we got a fully qualified url
-    if url.startswith('http'):
-        url = url.replace(settings.MEDIA_URL, '')
-        # We have no way to thumbnail this
-        if url.startswith('http'):
-            return dict(url=url, width='', height='')
+    #If the url still has a domain or scheme we can't thumb it
+    parsed = urlparse(url)
+    if parsed.scheme or parsed.netloc:
+        return dict(src=url,  width=str(source_width(img_object) or ''), height=str(source_height(img_object) or ''))
 
     # extract/ensure width & height
     # It's okay to end up with '' for one of the dimensions in the case of thumbnail
     try:
         width, height = geometry_parse(action, geometry, ValueError)
     except ValueError, e:
-        return exit(url, source_width(img_object), source_height(img_object))
-        # TODO: I Think we need to set width and height or this will crash with a ValueError if we try to float ''
         logger.warn('got junk geometry variable resolution: %s' % e)
+        return exit(url, source_width(img_object), source_height(img_object))
 
     # at this point we have our geo information as well as our action. if
     # it's a thumbnail, we'll need to try and scale the original image's

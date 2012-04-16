@@ -1,7 +1,9 @@
 from unittest import TestCase
-from mock import patch
+from mock import patch, Mock
 
-from lazythumbs.util import geometry_parse, build_geometry, get_img_attrs
+
+from django.conf import settings
+from lazythumbs.util import geometry_parse, build_geometry, compute_img, get_img_attrs
 
 
 class TestGeometry(TestCase):
@@ -37,6 +39,48 @@ class TestGeometry(TestCase):
         self.assertEqual(build_geometry(10, 20), "10x20")
         self.assertEqual(build_geometry(10, None), "10")
         self.assertEqual(build_geometry(None, 20), "x20")
+
+class TestComputeIMG(TestCase):
+
+    def get_fake_quack(self, url='', width=None, height=None):
+        def fake_quack(thing, properties, levels=[], default=None):
+            if 'width' in properties:
+                return width
+            if 'height' in properties:
+                return height
+            if 'url' in properties:
+                return url
+        return fake_quack
+
+    def test_foreign_url(self):
+        """ if someone tries to thumbnail an image not at MEDIA_ROOT return it unchanged """
+        path = "http://www.example.com/path/to/img.jpg"
+        attrs = compute_img(path, "resize", "100x100")
+        self.assertEqual(attrs['height'], '')
+        self.assertEqual(attrs['width'], '')
+        self.assertEqual(attrs['src'], path)
+
+    def test_local_url(self):
+        url = settings.MEDIA_URL + 'path/img.jpg'
+        attrs = compute_img(url, "resize", "200x200")
+        self.assertEqual(attrs['height'], '200')
+        self.assertEqual(attrs['width'], '200')
+        self.assertEqual(attrs['src'], settings.LAZYTHUMBS_URL + 'lt_cache/resize/200x200/path/img.jpg')
+
+    def test_no_url(self):
+        with patch('lazythumbs.util.quack', self.get_fake_quack(width=10, height=20)):
+            attrs = compute_img(Mock(), 'resize', '100x200')
+            self.assertEqual(attrs['src'], '')
+            self.assertEqual(attrs['width'], '')
+            self.assertEqual(attrs['height'], '')
+
+    def test_bad_geo(self):
+        with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=10, height=20)):
+            attrs = compute_img(Mock(), 'resize', 'XsxeX')
+            self.assertEqual(attrs['src'], 'http://media.example.com/media/path/img.jpg')
+            self.assertEqual(attrs['width'], '10')
+            self.assertEqual(attrs['height'], '20')
+
 
 class TestGetImgAttrs(TestCase):
     @patch('lazythumbs.util.compute_img')
