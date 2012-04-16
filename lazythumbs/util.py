@@ -35,9 +35,9 @@ def geometry_parse(action, geometry, exc):
     return width, height
 
 
-def build_geometry(width, height):
+def build_geometry(action, width, height):
     """ this builds a canonical geometry so we don't create the same image twice """
-    if width and height:
+    if width and height and not action == 'thumbnail':
         return "%sx%s" %(width, height)
     if not width:
         return "x%s" % height
@@ -160,7 +160,7 @@ def compute_img(thing, action, geometry):
             return exit(url, s_w, s_h)
 
 
-    geometry = build_geometry(width, height)
+    geometry = build_geometry(action, width, height)
     src = '%slt_cache/%s/%s/%s' % (getattr(settings, 'LAZYTHUMBS_URL', '/'), action, geometry, url)
 
     if getattr(settings, 'LAZYTHUMBS_DUMMY', False):

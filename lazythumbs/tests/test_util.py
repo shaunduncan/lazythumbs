@@ -49,11 +49,18 @@ class TestGeometry(TestCase):
         """ test that scale will raise the exception with an invalid geometry """
         self.assertRaises(self.TestException, geometry_parse, "scale", "boom", self.TestException)
 
-    def test_build_geo(self):
+    def test_build_geo_resize(self):
         """ test that build_geometry builds the correct geometry with 2d and width/height only """
-        self.assertEqual(build_geometry(10, 20), "10x20")
-        self.assertEqual(build_geometry(10, None), "10")
-        self.assertEqual(build_geometry(None, 20), "x20")
+        self.assertEqual(build_geometry('resize', 10, 20), "10x20")
+        self.assertEqual(build_geometry('resize', 10, None), "10")
+        self.assertEqual(build_geometry('resize', None, 20), "x20")
+
+    def test_build_geo_thumbnail(self):
+        """ test that build_geometry builds the correct geometry with 2d and width/height only """
+        self.assertEqual(build_geometry('thumbnail', 10, 20), "10")
+        self.assertEqual(build_geometry('thumbnail', 10, None), "10")
+        self.assertEqual(build_geometry('thumbnail', None, 20), "x20")
+
 
 class TestComputeIMG(TestCase):
 
@@ -143,7 +150,7 @@ class TestComputeIMG(TestCase):
         """ thumbnail with both dimensions works """
         with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=100, height=200)):
             attrs = compute_img(Mock(), 'thumbnail', '5x5')
-            self.assertEqual(attrs['src'], 'http://media.example.com/media/lt/lt_cache/thumbnail/5x5/path/img.jpg')
+            self.assertEqual(attrs['src'], 'http://media.example.com/media/lt/lt_cache/thumbnail/5/path/img.jpg')
             self.assertEqual(attrs['width'], '5')
             self.assertEqual(attrs['height'], '5')
 
@@ -151,7 +158,7 @@ class TestComputeIMG(TestCase):
         """ thumbnail with width only computes the proper height """
         with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=100, height=200)):
             attrs = compute_img(Mock(), 'thumbnail', '5')
-            self.assertEqual(attrs['src'], 'http://media.example.com/media/lt/lt_cache/thumbnail/5x10/path/img.jpg')
+            self.assertEqual(attrs['src'], 'http://media.example.com/media/lt/lt_cache/thumbnail/5/path/img.jpg')
             self.assertEqual(attrs['width'], '5')
             self.assertEqual(attrs['height'], '10')
 
@@ -159,7 +166,7 @@ class TestComputeIMG(TestCase):
         """ thumbnail with height only computes the proper height """
         with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=100, height=200)):
             attrs = compute_img(Mock(), 'thumbnail', 'x10')
-            self.assertEqual(attrs['src'], 'http://media.example.com/media/lt/lt_cache/thumbnail/5x10/path/img.jpg')
+            self.assertEqual(attrs['src'], 'http://media.example.com/media/lt/lt_cache/thumbnail/5/path/img.jpg')
             self.assertEqual(attrs['width'], '5')
             self.assertEqual(attrs['height'], '10')
 
