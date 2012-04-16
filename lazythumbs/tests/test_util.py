@@ -18,6 +18,12 @@ class TestGeometry(TestCase):
         h, w = geometry_parse('resize', '10x20', self.TestException)
         self.assertEqual(h, 10)
         self.assertEqual(w, 20)
+        h, w = geometry_parse('resize', '10', self.TestException)
+        self.assertEqual(h, 10)
+        self.assertEqual(w, 10)
+        h, w = geometry_parse('resize', 'x10', self.TestException)
+        self.assertEqual(h, 10)
+        self.assertEqual(w, 10)
 
     def test_invalid_thumb(self):
         self.assertRaises(self.TestException, geometry_parse, "thumbnail", "boom", self.TestException)
@@ -80,6 +86,62 @@ class TestComputeIMG(TestCase):
             self.assertEqual(attrs['src'], 'http://media.example.com/media/path/img.jpg')
             self.assertEqual(attrs['width'], '10')
             self.assertEqual(attrs['height'], '20')
+
+    def test_too_wide(self):
+        with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=10, height=20)):
+            attrs = compute_img(Mock(), 'resize', '100x5')
+            self.assertEqual(attrs['src'], 'http://media.example.com/media/path/img.jpg')
+            self.assertEqual(attrs['width'], '10')
+            self.assertEqual(attrs['height'], '20')
+
+    def test_too_tall(self):
+        with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=10, height=20)):
+            attrs = compute_img(Mock(), 'resize', '5x50')
+            self.assertEqual(attrs['src'], 'http://media.example.com/media/path/img.jpg')
+            self.assertEqual(attrs['width'], '10')
+            self.assertEqual(attrs['height'], '20')
+
+    def test_2d_resize(self):
+        with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=100, height=200)):
+            attrs = compute_img(Mock(), 'resize', '5x50')
+            self.assertEqual(attrs['src'], 'http://media.example.com/media/lt/lt_cache/resize/5x50/path/img.jpg')
+            self.assertEqual(attrs['width'], '5')
+            self.assertEqual(attrs['height'], '50')
+
+    def test_width_resize(self):
+        with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=100, height=200)):
+            attrs = compute_img(Mock(), 'resize', '5')
+            self.assertEqual(attrs['src'], 'http://media.example.com/media/lt/lt_cache/resize/5x5/path/img.jpg')
+            self.assertEqual(attrs['width'], '5')
+            self.assertEqual(attrs['height'], '5')
+
+    def test_height_resize(self):
+        with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=100, height=200)):
+            attrs = compute_img(Mock(), 'resize', 'x5')
+            self.assertEqual(attrs['src'], 'http://media.example.com/media/lt/lt_cache/resize/5x5/path/img.jpg')
+            self.assertEqual(attrs['width'], '5')
+            self.assertEqual(attrs['height'], '5')
+
+    def test_thumb_both(self):
+        with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=100, height=200)):
+            attrs = compute_img(Mock(), 'thumbnail', '5x5')
+            self.assertEqual(attrs['src'], 'http://media.example.com/media/lt/lt_cache/thumbnail/5x5/path/img.jpg')
+            self.assertEqual(attrs['width'], '5')
+            self.assertEqual(attrs['height'], '5')
+
+    def test_thumb_width(self):
+        with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=100, height=200)):
+            attrs = compute_img(Mock(), 'thumbnail', '5')
+            self.assertEqual(attrs['src'], 'http://media.example.com/media/lt/lt_cache/thumbnail/5x10/path/img.jpg')
+            self.assertEqual(attrs['width'], '5')
+            self.assertEqual(attrs['height'], '10')
+
+    def test_thumb_height(self):
+        with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=100, height=200)):
+            attrs = compute_img(Mock(), 'thumbnail', 'x10')
+            self.assertEqual(attrs['src'], 'http://media.example.com/media/lt/lt_cache/thumbnail/5x10/path/img.jpg')
+            self.assertEqual(attrs['width'], '5')
+            self.assertEqual(attrs['height'], '10')
 
 
 class TestGetImgAttrs(TestCase):

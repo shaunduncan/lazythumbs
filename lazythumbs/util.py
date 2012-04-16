@@ -28,7 +28,7 @@ def geometry_parse(action, geometry, exc):
     width = int(width_match.groups()[0]) if width_match else None
     height = int(height_match.groups()[0]) if height_match else None
 
-    if not (width or height) and not action == 'thumbnail':
+    if not (width and height) and not action == 'thumbnail':
         height = width or height
         width = width or height
 
@@ -153,11 +153,11 @@ def compute_img(thing, action, geometry):
     # special url for lazythumbs
     if img_object:
         s_w = source_width(img_object)
-        if (s_w and width) and int(width) >= int(s_w):
+        if (s_w and width) and width >= s_w:
             return exit(url, s_w, source_height(img_object))
         s_h = source_height(img_object)
-        if (s_h and height) and int(height) >= int(s_h):
-            return exit(url, s_w or source_width(img_object), s_h)
+        if (s_h and height) and height >= s_h:
+            return exit(url, s_w, s_h)
 
 
     geometry = build_geometry(width, height)
