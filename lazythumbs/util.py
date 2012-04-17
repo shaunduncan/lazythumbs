@@ -1,4 +1,4 @@
-import re, logging
+import logging, re, types
 from functools import partial
 from itertools import chain
 from urlparse import urljoin, urlparse
@@ -105,7 +105,7 @@ def compute_img(thing, action, geometry):
 
     # compute url
     img_object = None
-    if type(thing) == type(''):
+    if type(thing) in types.StringTypes:
         url = thing
     else:
         img_object = thing
