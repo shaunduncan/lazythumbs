@@ -4,7 +4,7 @@ from mock import patch, Mock
 
 from django.conf import settings
 from lazythumbs.util import geometry_parse, build_geometry, compute_img, get_img_attrs
-
+from lazythumb.util import get_format
 
 class TestGeometry(TestCase):
     class TestException:
@@ -189,3 +189,21 @@ class TestGetImgAttrs(TestCase):
         """ get_img_attrs call compute with the proper geometry when it's given both dimensions """
         get_img_attrs('url', 'noaction', 10, 20)
         self.assertEqual(mock_ci.call_args[0][2], '10x20')
+
+
+class TestGetFormat(TestCase):
+    """ These tests actually rely on PIL """
+
+    def test_notaformat(self):
+        self.assertRaises(KeyError, get_format, "/path/img.nonexistantformat")
+
+    def test_jpeg(self):
+        self.assertEqual(get_format("path/img.jpeg"), 'JPEG')
+        self.assertEqual(get_format("path/img.jpg"), 'JPEG')
+        self.assertEqual(get_format("path/img.jif"), 'JPEG')
+
+    def test_gif(self):
+        self.assertEqual(get_format("path/img.gif"), 'GIF')
+
+    def test_png(self):
+        self.assertEqual(get_format("path/img.png"), 'PNG')

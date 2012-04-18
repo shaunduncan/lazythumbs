@@ -86,8 +86,10 @@ class LazyThumbRenderer(View):
         if was_404 == 1:
             return self.four_oh_four()
 
+
+        img_format = get_format(rendered_path)
         # TODO this tangled mess of try/except is hideous... but such is
-        # filesystem io?
+        # filesystem io? No it can be cleaned up by splitting it out
         try:
             # does rendered file already exist?
             raw_data = self.fs.open(rendered_path).read()
@@ -105,21 +107,17 @@ class LazyThumbRenderer(View):
                 )
                 # this code from sorl-thumbnail
                 buf = StringIO()
+                # TODO we need a better way of choosing options based on size and format
                 params = {
                     'format': get_format(rendered_path),
-                    'optimize': 1,
-                    'progressive': True
+                    'quality': 80,
                 }
                 try:
                     pil_img.save(buf, **params)
                 except IOError:
-                    # TODO this seems to be happening when the image is too large for the buffer.
-                    # TODO this also happens when the image is not jpeg.
-                    # We should probably ask permission in this case.
-                    logger.info("failed to optimize or progressive jpeg perhaps it's too big or not a jpeg, removing all options")
-                    params.pop('optimize')
-                    params.pop('progressive')
-                    pil_img.save(buf, params)
+                    # TODO reevaluate this except when we make options smarter
+                    logger.info("Failed to create new image %s . Trying without options" %rendered_path)
+                    pil_img.save(buf, format=img_format)
                 raw_data = buf.getvalue()
                 buf.close()
                 self.fs.save(rendered_path, ContentFile(raw_data))
@@ -132,7 +130,7 @@ class LazyThumbRenderer(View):
 
         cache.set(cache_key, 0, settings.LAZYTHUMBS_CACHE_TIMEOUT)
 
-        return self.two_hundred(raw_data)
+        return self.two_hundred(raw_data, img_format)
 
     @action
     def resize(self, width, height, img_path=None, img=None):
@@ -265,14 +263,14 @@ class LazyThumbRenderer(View):
         hashed = md5('%s:%s:%s:%s' % (img_path, action, width, height))
         return hashed.hexdigest()
 
-    def two_hundred(self, img_data):
+    def two_hundred(self, img_data, img_format):
         """
         Generate a 200 image response with raw image data, Cache-Control set,
         and an image/jpeg content-type.
 
         :param img_data: raw image data as a string
         """
-        resp = HttpResponse(img_data, content_type='image/jpeg')
+        resp = HttpResponse(img_data, content_type='image/%s' %img_format.lower())
         resp['Cache-Control'] = 'public,max-age=%s' % settings.LAZYTHUMBS_CACHE_TIMEOUT
         return resp
 

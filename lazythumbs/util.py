@@ -188,6 +188,9 @@ def get_img_attrs(thing, action, width='', height=''):
     return compute_img(thing, action, geometry)
 
 def get_format(file_path):
+    """ This gets a PIL image format string from a file name
+        This should be exposed from PIL but isn't so i've copied PIL code here
+    """
     ext = os.path.splitext(file_path)[1].lower()
     try:
         fmt = Image.EXTENSION[ext]
