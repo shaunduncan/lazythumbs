@@ -130,7 +130,7 @@ class GetViewTest(TestCase):
         cache or touching filesystem if we encounter a cached 404.
         """
         req = Mock()
-        req.path = "/lt_cache/thumbnail/48/i/p"
+        req.path = "/lt_cache/thumbnail/48/i/p.jpg"
         self.renderer._render_and_save = Mock()
         with patch('lazythumbs.views.cache', self.mc_factory(1)) as mc:
             resp = self.renderer.get(req, 'thumbnail', '48', 'i/p')
@@ -145,7 +145,7 @@ class GetViewTest(TestCase):
         headers are set and the 404 was cached.
         """
         req = Mock()
-        req.path = "/lt_cache/thumbnail/48/i/p"
+        req.path = "/lt_cache/thumbnail/48/i/p.jpg"
         with patch('lazythumbs.views.cache', MockCache()) as mc:
             resp = self.renderer.get(req, 'thumbnail', '48', 'i/p')
         self.assertEqual(resp.status_code, 404)
@@ -162,7 +162,7 @@ class GetViewTest(TestCase):
         proper response headers are set and the rendered path was cached.
         """
         req = Mock()
-        req.path = "/lt_cache/thumbnail/48/i/p"
+        req.path = "/lt_cache/thumbnail/48/i/p.jpg"
         self.renderer.fs.save = Mock()
         with patch('lazythumbs.views.Image', self.mock_Image):
             with patch('lazythumbs.views.cache', MockCache()) as mc:

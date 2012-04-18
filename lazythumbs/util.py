@@ -1,4 +1,4 @@
-import logging, re, types
+import logging, os, re, types
 from functools import partial
 from itertools import chain
 from urlparse import urljoin, urlparse
@@ -187,11 +187,11 @@ def get_img_attrs(thing, action, width='', height=''):
         geometry = "%sx%s" %(width or '', height)
     return compute_img(thing, action, geometry)
 
-def get_format(file_name):
-    ext = file_name.split('.')[-1]
+def get_format(file_path):
+    ext = os.path.splitext(file_path)[1].lower()
     try:
-        fmt = Image.EXTENSIONS[ext]
+        fmt = Image.EXTENSION[ext]
     except KeyError:
         Image.init()
-        fmt = Image.EXTENSIONS[ext]
+        fmt = Image.EXTENSION[ext]
     return fmt
