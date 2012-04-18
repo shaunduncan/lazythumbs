@@ -3,6 +3,7 @@ from functools import partial
 from itertools import chain
 from urlparse import urljoin, urlparse
 
+from PIL import Image
 from django.conf import settings
 
 logger = logging.getLogger()
@@ -185,3 +186,12 @@ def get_img_attrs(thing, action, width='', height=''):
     else:
         geometry = "%sx%s" %(width or '', height)
     return compute_img(thing, action, geometry)
+
+def get_format(file_name):
+    ext = file_name.split('.')[-1]
+    try:
+        fmt = Image.EXTENSIONS[ext]
+    except KeyError:
+        Image.init()
+        fmt = Image.EXTENSIONS[ext]
+    return fmt

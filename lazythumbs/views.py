@@ -14,7 +14,7 @@ from django.http import HttpResponse
 from django.views.generic.base import View
 from PIL import Image
 
-from lazythumbs.util import geometry_parse
+from lazythumbs.util import geometry_parse, get_format
 
 logger = logging.getLogger('lazythumbs')
 
@@ -43,6 +43,7 @@ class LazyThumbRenderer(View):
             for a in (getattr(self, a, None) for a in dir(self))
             if type(a) == types.MethodType and getattr(a, 'is_action', False)
         ]
+
 
     def get(self, request, action, geometry, source_path):
         """
@@ -105,7 +106,7 @@ class LazyThumbRenderer(View):
                 # this code from sorl-thumbnail
                 buf = StringIO()
                 params = {
-                    'format': 'JPEG',
+                    'format': get_format(rendered_path),
                     'optimize': 1,
                     'progressive': True
                 }
@@ -118,7 +119,7 @@ class LazyThumbRenderer(View):
                     logger.info("failed to optimize or progressive jpeg perhaps it's too big or not a jpeg, removing all options")
                     params.pop('optimize')
                     params.pop('progressive')
-                    pil_img.save(buf)
+                    pil_img.save(buf, params)
                 raw_data = buf.getvalue()
                 buf.close()
                 self.fs.save(rendered_path, ContentFile(raw_data))
