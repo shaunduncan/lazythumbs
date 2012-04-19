@@ -86,7 +86,7 @@ class TemplateTagRenderTest(TestCase):
 
     def test_resize_invalid_geo(self):
         """
-        for a resize, if the geometry reference by the raw_geometry variable is
+        for a resize, if the geometry reference by the geometry variable is
         malformed, set width and height to None.
         """
         self.context['url'] = 'i/p'
@@ -100,7 +100,7 @@ class TemplateTagRenderTest(TestCase):
 
     def test_thumbnail_invalid_geo(self):
         """
-        for a thumbnail, if the geometry reference by the raw_geometry variable is
+        for a thumbnail, if the geometry reference by the geometry variable is
         malformed, set width and height to None.
         """
         node = node_factory("tag 'url' thumbnail geo as img_tag")
@@ -139,7 +139,7 @@ class TemplateTagRenderTest(TestCase):
 
     def test_invalid_geometry(self):
         """
-        if the geometry reference by the raw_geometry variable is
+        if the geometry reference by the geometry variable is
         malformed, set width and height to None.
         """
         self.context['geo'] = 'boom'

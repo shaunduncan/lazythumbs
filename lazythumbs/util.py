@@ -82,19 +82,6 @@ def quack(thing, properties, levels=[], default=None):
     return default
 
 
-def get_img_object_url(thing):
-    img_object = None
-    if type(thing) == type(''):
-        url = thing
-    else:
-        img_object = thing
-        url = quack(img_object, ['name', 'url', 'path'], ['photo', 'image'],'')
-
-    url.replace(settings.MEDIA_URL, '')
-
-    return img_object, url
-
-
 def compute_img(thing, action, geometry):
     """ generate a src url, width and height tuple for given object or url"""
 
