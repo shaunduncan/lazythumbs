@@ -4,7 +4,7 @@ from mock import patch, Mock
 
 from django.conf import settings
 from lazythumbs.util import geometry_parse, build_geometry, compute_img, get_img_attrs
-from lazythumb.util import get_format
+from lazythumbs.util import get_format
 
 class TestGeometry(TestCase):
     class TestException:
