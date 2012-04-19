@@ -200,7 +200,6 @@ class TestGetFormat(TestCase):
     def test_jpeg(self):
         self.assertEqual(get_format("path/img.jpeg"), 'JPEG')
         self.assertEqual(get_format("path/img.jpg"), 'JPEG')
-        self.assertEqual(get_format("path/img.jif"), 'JPEG')
 
     def test_gif(self):
         self.assertEqual(get_format("path/img.gif"), 'GIF')
