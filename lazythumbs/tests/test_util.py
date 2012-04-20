@@ -86,8 +86,8 @@ class TestComputeIMG(TestCase):
         """ if thing is a url and it's local we can attempt to resize it """
         url = settings.MEDIA_URL + 'path/img.jpg'
         attrs = compute_img(url, "resize", "200x200")
-        self.assertEqual(attrs['height'], '')
-        self.assertEqual(attrs['width'], '')
+        self.assertEqual(attrs['height'], '200')
+        self.assertEqual(attrs['width'], '200')
         self.assertEqual(attrs['src'], settings.LAZYTHUMBS_URL + 'lt_cache/resize/200x200/path/img.jpg')
 
     def test_no_url(self):
