@@ -154,6 +154,12 @@ def compute_img(thing, action, geometry):
     if getattr(settings, 'LAZYTHUMBS_DUMMY', False):
         src = 'http://placekitten.com/%s/%s' % (width, height)
 
+    # Now that we've computed the geometry we can make sure that
+    # the width and height were computed not guessed.
+    if not(source_width(img_object) or source_height(img_object)):
+            width = None
+            height = None
+
     return exit(src, width, height)
 
 def get_img_url(thing, action, width=None, height=None):

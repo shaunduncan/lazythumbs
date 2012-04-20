@@ -79,8 +79,8 @@ class TemplateTagRenderTest(TestCase):
 
         self.assertTrue('img_tag' in self.context)
         img_tag = self.context['img_tag']
-        self.assertEqual(img_tag['width'], '48')
-        self.assertEqual(img_tag['height'], '50')
+        self.assertEqual(img_tag['width'], '')
+        self.assertEqual(img_tag['height'], '')
         print img_tag['src']
         self.assertTrue('url' in img_tag['src'])
 
@@ -122,8 +122,8 @@ class TemplateTagRenderTest(TestCase):
         node.render(self.mock_cxt)
 
         img = self.context['img']
-        self.assertEqual(img['width'], '48')
-        self.assertEqual(img['height'], '50')
+        self.assertEqual(img['width'], '')
+        self.assertEqual(img['height'], '')
 
     def test_thumbnail_and_url_valid_geo(self):
         """
@@ -135,7 +135,7 @@ class TemplateTagRenderTest(TestCase):
         node.render(self.mock_cxt)
         self.assertTrue('img' in self.context)
         img = self.context['img']
-        self.assertEqual(img['height'], '48')
+        self.assertEqual(img['height'], '')
 
     def test_invalid_geometry(self):
         """
@@ -167,7 +167,7 @@ class TemplateTagRenderTest(TestCase):
         node.render(self.mock_cxt)
 
         img_tag = self.context['img_tag']
-        self.assertEqual(img_tag['width'], '48')
+        self.assertEqual(img_tag['width'], '')
         self.assertEqual(img_tag['height'], '')
         self.assertTrue('url' in img_tag['src'])
 
@@ -178,8 +178,8 @@ class TemplateTagRenderTest(TestCase):
         node.render(self.mock_cxt)
 
         img_tag = self.context['img_tag']
-        self.assertEqual(img_tag['width'], '48')
-        self.assertEqual(img_tag['height'], '100')
+        self.assertEqual(img_tag['width'], '')
+        self.assertEqual(img_tag['height'], '')
         self.assertTrue('url' in img_tag['src'])
 
     def test_thing_like_IF_introspection_noop(self):
@@ -249,8 +249,8 @@ class TemplateTagRenderTest(TestCase):
         node.render(self.mock_cxt)
 
         img_tag = self.context['img_tag']
-        self.assertEqual(img_tag['width'], '30')
-        self.assertEqual(img_tag['height'], '100')
+        self.assertEqual(img_tag['width'], '')
+        self.assertEqual(img_tag['height'], '')
         self.assertTrue('some_url' in img_tag['src'])
 
     def test_render_no_url(self):
