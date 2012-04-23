@@ -10,7 +10,7 @@ import logging
 import re
 
 from django.template import TemplateSyntaxError, Library, Node, Variable
-from lazythumbs.util import compute_img
+from lazythumbs.util import compute_img, get_attr_string
 
 
 # TODO this should *not* be hardcoded. it completely prevents the proper
@@ -83,3 +83,17 @@ class LazythumbNode(Node):
         output = self.nodelist.render(context)
         context.pop()
         return output
+
+
+register.tag('img_attrs', lambda p,t: ImgAttrs(p,t))
+class ImgAttrs(Node):
+    usage = 'Expected invocation is {% dimension_attrs img %} where img is the img attrs set by the lazythumb tag'
+    def __init__(self, parser, token):
+        try:
+           _, img = token.contents.split()
+        except ValueError:
+            raise TemplateSyntaxError('dimension_attrs: %s' %self.usage)
+        self.img_var = Variable(img)
+
+    def render(self, context):
+        return get_attr_string(self.img_var(context))

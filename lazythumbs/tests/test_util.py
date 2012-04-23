@@ -4,7 +4,7 @@ from mock import patch, Mock
 
 from django.conf import settings
 from lazythumbs.util import geometry_parse, build_geometry, compute_img, get_img_attrs
-from lazythumbs.util import get_format
+from lazythumbs.util import get_format, get_attr_string
 
 class TestGeometry(TestCase):
     class TestException:
@@ -206,3 +206,36 @@ class TestGetFormat(TestCase):
 
     def test_png(self):
         self.assertEqual(get_format("path/img.png"), 'PNG')
+
+class TestGetAttrString(TestCase):
+    def test_both(self):
+        """ make sure the attr string has both if both are given """
+        attr_dict = dict(src="http://path.jpg", width="10", height="20")
+        attr_str = get_attr_string(attr_dict)
+        self.assertTrue('width="10"' in attr_str)
+        self.assertTrue('height="20"' in attr_str)
+        self.assertTrue('src="http://path.jpg"' in attr_str)
+
+    def test_width(self):
+        """ make sure the attr string has only width if that is all that is given """
+        attr_dict = dict(src="http://path.jpg", width="10", height="")
+        attr_str = get_attr_string(attr_dict)
+        self.assertTrue('width="10"' in attr_str)
+        self.assertFalse('height' in attr_str)
+        self.assertTrue('src="http://path.jpg"' in attr_str)
+
+    def test_height(self):
+        """ make sure the attr string has only height if that is all that is given """
+        attr_dict = dict(src="http://path.jpg", width="", height="23")
+        attr_str = get_attr_string(attr_dict)
+        self.assertTrue('height="23"' in attr_str)
+        self.assertFalse('width' in attr_str)
+        self.assertTrue('src="http://path.jpg"' in attr_str)
+
+    def test_neither(self):
+        """ make sure the empty string is returned if that is all that is given"""
+        attr_dict = dict(src="http://path.jpg", width="", height="")
+        attr_str = get_attr_string(attr_dict)
+        self.assertFalse('width' in attr_str)
+        self.assertFalse('height' in attr_str)
+        self.assertTrue('src="http://path.jpg"' in attr_str)
