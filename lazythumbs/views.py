@@ -203,7 +203,6 @@ class LazyThumbRenderer(View):
 
         return self.scale(width, height, img=img)
 
-    @action
     def scale(self, width, height, img_path=None, img=None):
         """
         Scale to desired dimensions paying no attention to ratio.
