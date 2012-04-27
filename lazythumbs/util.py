@@ -135,16 +135,19 @@ def compute_img(thing, action, geometry):
                 if s_h:
                     height = scale(s_h, width, s_w)
 
+
     # if it's possible to compute source dimensions there's a potential
     # early exit here. if we can tell the new image would have the
     # same/bigger dimensions, just use the image's info and don't make a
     # special url for lazythumbs
+    def _source_smaller(img, source):
+        return source and img and img >= source
+
     if img_object:
         s_w = source_width(img_object)
-        if (s_w and width) and width >= s_w:
-            return exit(url, s_w, source_height(img_object))
         s_h = source_height(img_object)
-        if (s_h and height) and height >= s_h:
+
+        if _source_smaller(width, s_w) and _source_smaller(height, s_h):
             return exit(url, s_w, s_h)
 
 

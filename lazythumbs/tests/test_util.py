@@ -106,22 +106,6 @@ class TestComputeIMG(TestCase):
             self.assertEqual(attrs['width'], '10')
             self.assertEqual(attrs['height'], '20')
 
-    def test_too_wide(self):
-        """ if the size requested is too wide we should just return the original and it's width/height """
-        with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=10, height=20)):
-            attrs = compute_img(Mock(), 'resize', '100x5')
-            self.assertEqual(attrs['src'], settings.MEDIA_URL + 'path/img.jpg')
-            self.assertEqual(attrs['width'], '10')
-            self.assertEqual(attrs['height'], '20')
-
-    def test_too_tall(self):
-        """ if the size requested is too tall we should just return the original and it's width/height """
-        with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=10, height=20)):
-            attrs = compute_img(Mock(), 'resize', '5x50')
-            self.assertEqual(attrs['src'], settings.MEDIA_URL + 'path/img.jpg')
-            self.assertEqual(attrs['width'], '10')
-            self.assertEqual(attrs['height'], '20')
-
     def test_2d_resize(self):
         """ resize with two dimensions returns the proper path """
         with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=100, height=200)):
