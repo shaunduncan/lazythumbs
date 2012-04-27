@@ -179,7 +179,8 @@ class TestGetFormat(TestCase):
     """ These tests actually rely on PIL """
 
     def test_notaformat(self):
-        self.assertRaises(KeyError, get_format, "/path/img.nonexistantformat")
+        """ get_format will assume JPEG for unknown formats """
+        self.assertEqual(get_format("path/img"), 'JPEG')
 
     def test_jpeg(self):
         self.assertEqual(get_format("path/img.jpeg"), 'JPEG')

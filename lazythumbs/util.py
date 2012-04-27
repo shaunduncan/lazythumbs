@@ -186,7 +186,10 @@ def get_format(file_path):
         fmt = Image.EXTENSION[ext]
     except KeyError:
         Image.init()
-        fmt = Image.EXTENSION[ext]
+        try:
+            fmt = Image.EXTENSION[ext]
+        except KeyError:
+            return "JPEG" # if we don't recognize the format, assume JPEG
     return fmt
 
 def get_attr_string(img):
