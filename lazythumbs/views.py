@@ -120,7 +120,12 @@ class LazyThumbRenderer(View):
                     pil_img.save(buf, format=img_format)
                 raw_data = buf.getvalue()
                 buf.close()
-                self.fs.save(rendered_path, ContentFile(raw_data))
+                try:
+                    self.fs.save(rendered_path, ContentFile(raw_data))
+                except OSError:
+                    # race condition, another WSGI worker wrote the file first
+                    pass
+
             except (IOError, SuspiciousOperation, ValueError), e:
                 # we've now failed to find a rendered path as well as the
                 # original source path. this is a 404.
