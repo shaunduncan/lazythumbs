@@ -1,5 +1,6 @@
 from cStringIO import StringIO
 from hashlib import md5
+import errno
 import logging
 import os
 import re
@@ -122,9 +123,11 @@ class LazyThumbRenderer(View):
                 buf.close()
                 try:
                     self.fs.save(rendered_path, ContentFile(raw_data))
-                except OSError:
-                    # race condition, another WSGI worker wrote the file first
-                    pass
+                except OSError, e:
+                    if e.errno == errno.EEXIST:
+                        pass # race condition, another WSGI worker wrote file or directory first
+                    else:
+                        raise
 
             except (IOError, SuspiciousOperation, ValueError), e:
                 # we've now failed to find a rendered path as well as the
