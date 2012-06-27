@@ -96,4 +96,4 @@ class ImgAttrs(Node):
         self.img_var = Variable(img)
 
     def render(self, context):
-        return get_attr_string(self.img_var(context))
+        return get_attr_string(self.img_var.resolve(context))
