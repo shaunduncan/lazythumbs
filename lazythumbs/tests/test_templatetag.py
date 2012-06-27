@@ -4,16 +4,26 @@ from django.template import TemplateSyntaxError, VariableDoesNotExist, Variable
 
 from mock import Mock
 
-from lazythumbs.templatetags.lazythumb import LazythumbNode
+from lazythumbs.templatetags.lazythumb import LazythumbNode, ImgAttrsNode
 
 
-def node_factory(invocation):
+def node_factory(node, invocation):
     mt = Mock()
     mt.contents = invocation
-    return LazythumbNode(Mock(), mt)
+    return node(Mock(), mt)
+
+class LazythumbsTemplateTagTestCase(TestCase):
+    def setUp(self):
+        # NOTE this context will not push and pop so we can inspect it
+        self.context = {}
+        mock_cxt = Mock()
+        mock_cxt.__getitem__ = lambda _,x: self.context[x]
+        mock_cxt.__setitem__ = lambda _,x,y: self.context.__setitem__(x,y)
+
+        self.mock_cxt = mock_cxt
 
 
-class TemplateTagSyntaxTest(TestCase):
+class LazythumbSyntaxTest(TestCase):
     """ Test the arg validation of the template tag. """
     def test_too_many_args(self):
         mt = Mock()
@@ -31,33 +41,27 @@ class TemplateTagSyntaxTest(TestCase):
         self.assertRaises(TemplateSyntaxError, LazythumbNode, Mock(), mt)
 
     def test_url_str(self):
-        node = node_factory("tag 'url' resize '30x30' as as_var")
+        node = node_factory(LazythumbNode, "tag 'url' resize '30x30' as as_var")
         self.assertEqual(node.thing, 'url')
 
     def test_url_var(self):
-        node = node_factory("tag url resize '30x30' as as_var")
+        node = node_factory(LazythumbNode, "tag url resize '30x30' as as_var")
         self.assertEqual(type(node.thing), Variable)
         self.assertEqual(node.thing.var, 'url')
 
-class TemplateTagGeometryCompileTest(TestCase):
+class LazythumbGeometryCompileTest(TestCase):
     """ test handling of geometry argument for each action """
 
     def test_geo_var(self):
-        node = node_factory("tag url thumbnail geo as as_var")
+        node = node_factory(LazythumbNode, "tag url thumbnail geo as as_var")
         self.assertEqual(type(node.geometry), Variable)
         self.assertEqual(node.geometry.var, 'geo')
 
-class TemplateTagRenderTest(TestCase):
+class LazythumbRenderTest(LazythumbsTemplateTagTestCase):
     """ test behavior of template tag's output """
     def setUp(self):
 
-        # NOTE this context will not push and pop so we can inspect it
-        self.context = {}
-        mock_cxt = Mock()
-        mock_cxt.__getitem__ = lambda _,x: self.context[x]
-        mock_cxt.__setitem__ = lambda _,x,y: self.context.__setitem__(x,y)
-
-        self.mock_cxt = mock_cxt
+        super(LazythumbRenderTest, self).setUp()
 
         class PseudoImageFile(object):
             def __init__(self, w, h):
@@ -74,7 +78,7 @@ class TemplateTagRenderTest(TestCase):
 
     def test_valid_basic(self):
         """ ensure sanity in the simplest case """
-        node = node_factory("tag 'url' resize '48x50' as img_tag")
+        node = node_factory(LazythumbNode, "tag 'url' resize '48x50' as img_tag")
         node.render(self.mock_cxt)
 
         self.assertTrue('img_tag' in self.context)
@@ -90,7 +94,7 @@ class TemplateTagRenderTest(TestCase):
         malformed, set width and height to None.
         """
         self.context['url'] = 'i/p'
-        node = node_factory("tag 'url' resize geo as img_tag")
+        node = node_factory(LazythumbNode, "tag 'url' resize geo as img_tag")
         for bad_geo in ['boom', '40x', '40x40x', '40x40x40']:
             self.context['geo'] = bad_geo
             node.render(self.mock_cxt)
@@ -103,7 +107,7 @@ class TemplateTagRenderTest(TestCase):
         for a thumbnail, if the geometry reference by the geometry variable is
         malformed, set width and height to None.
         """
-        node = node_factory("tag 'url' thumbnail geo as img_tag")
+        node = node_factory(LazythumbNode, "tag 'url' thumbnail geo as img_tag")
         for bad_geo in ['boom', '40x40x40', '40x']:
             self.context['geo'] = bad_geo
             node.render(self.mock_cxt)
@@ -118,7 +122,7 @@ class TemplateTagRenderTest(TestCase):
         """
         self.context['geo'] = '48x50'
 
-        node = node_factory("tag 'url' resize geo as img")
+        node = node_factory(LazythumbNode, "tag 'url' resize geo as img")
         node.render(self.mock_cxt)
 
         img = self.context['img']
@@ -131,7 +135,7 @@ class TemplateTagRenderTest(TestCase):
         the as variable for a valid geometry Variable.
         """
         self.context['geo'] = 'x48'
-        node = node_factory("tag 'url' thumbnail geo as img")
+        node = node_factory(LazythumbNode, "tag 'url' thumbnail geo as img")
         node.render(self.mock_cxt)
         self.assertTrue('img' in self.context)
         img = self.context['img']
@@ -144,7 +148,7 @@ class TemplateTagRenderTest(TestCase):
         """
         self.context['geo'] = 'boom'
         self.context['url'] = 'i/p'
-        node = node_factory("tag 'url' resize geo as img_tag")
+        node = node_factory(LazythumbNode, "tag 'url' resize geo as img_tag")
         node.render(self.mock_cxt)
 
         img_tag = self.context['img_tag']
@@ -152,7 +156,7 @@ class TemplateTagRenderTest(TestCase):
         self.assertEqual(img_tag['width'], '')
         self.assertTrue('url' in img_tag['src'])
 
-        node = node_factory("tag 'url' thumbnail geo as img_tag")
+        node = node_factory(LazythumbNode, "tag 'url' thumbnail geo as img_tag")
         node.render(self.mock_cxt)
 
         img_tag = self.context['img_tag']
@@ -162,7 +166,9 @@ class TemplateTagRenderTest(TestCase):
 
     def test_valid_single_geo(self):
         """ test geo variable that resolves to a single number """
-        node = node_factory("tag 'url' thumbnail geo as img_tag")
+
+        node = node_factory(LazythumbNode, "tag 'url' thumbnail geo as img_tag")
+
         self.context['geo'] = '48'
         node.render(self.mock_cxt)
 
@@ -173,7 +179,7 @@ class TemplateTagRenderTest(TestCase):
 
     def test_valid_double_geo(self):
         """ test geo variable that resolves to a pair of numbers """
-        node = node_factory("tag 'url' resize geo as img_tag")
+        node = node_factory(LazythumbNode, "tag 'url' resize geo as img_tag")
         self.context['geo'] = '48x100'
         node.render(self.mock_cxt)
 
@@ -187,7 +193,7 @@ class TemplateTagRenderTest(TestCase):
         test behaviour for when url does not resolve to a string but rather
         an ImageFile like object.
         """
-        node = node_factory("tag img_file resize geo as img_tag")
+        node = node_factory(LazythumbNode, "tag img_file resize geo as img_tag")
         self.context['img_file'] = self.PseudoImageFile(1000, 500)
         self.context['geo'] = 'boom'
         node.render(self.mock_cxt)
@@ -202,7 +208,7 @@ class TemplateTagRenderTest(TestCase):
         test behaviour for when url does not resolve to a string but rather
         an ImageFile like object.
         """
-        node = node_factory("tag img_file thumbnail geo as img_tag")
+        node = node_factory(LazythumbNode, "tag img_file thumbnail geo as img_tag")
         self.context['img_file'] = self.PseudoImageFile(100, 200)
         self.context['geo'] = '50'
         node.render(self.mock_cxt)
@@ -217,7 +223,7 @@ class TemplateTagRenderTest(TestCase):
         test behaviour for when url does not resolve to a string but rather
         an object that nests an ImageFile-like object
         """
-        node = node_factory("tag img_file resize geo as img_tag")
+        node = node_factory(LazythumbNode, "tag img_file resize geo as img_tag")
         self.context['img_file'] = self.PseudoPhoto(1000, 500)
         self.context['geo'] = 'boom'
         node.render(self.mock_cxt)
@@ -233,7 +239,7 @@ class TemplateTagRenderTest(TestCase):
         an object that nests an ImageFile-like object with no height. height
         should be scaled.
         """
-        node = node_factory("tag img_file thumbnail geo as img_tag")
+        node = node_factory(LazythumbNode, "tag img_file thumbnail geo as img_tag")
         self.context['img_file'] = self.PseudoPhoto(100, 200)
         self.context['geo'] = '50'
         node.render(self.mock_cxt)
@@ -244,7 +250,7 @@ class TemplateTagRenderTest(TestCase):
         self.assertTrue('image_path' in img_tag['src'])
 
     def test_render_url_var_is_str(self):
-        node = node_factory("tag url_var resize '30x100' as img_tag")
+        node = node_factory(LazythumbNode, "tag url_var resize '30x100' as img_tag")
         self.context['url_var'] = 'some_url'
         node.render(self.mock_cxt)
 
@@ -254,5 +260,18 @@ class TemplateTagRenderTest(TestCase):
         self.assertTrue('some_url' in img_tag['src'])
 
     def test_render_no_url(self):
-        node = node_factory("tag img_file resize '48x48' as img_tag")
+        node = node_factory(LazythumbNode, "tag img_file resize '48x48' as img_tag")
         self.assertRaises(VariableDoesNotExist, node.render, (node, {}))
+
+class ImgAttrsRenderTest(LazythumbsTemplateTagTestCase):
+    """ test behavior of template tag's output """
+
+    def test_valid_basic(self):
+        """ ensure the usage works """
+        node = node_factory(ImgAttrsNode, "tag img")
+        self.mock_cxt['img'] = {'src': 'test.png',
+                                'width': '50',
+                                'height': '49'}
+        output = node.render(self.mock_cxt)
+
+        self.assertEqual(output, 'src="test.png" height="49" width="50"')

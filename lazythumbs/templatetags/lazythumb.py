@@ -85,8 +85,8 @@ class LazythumbNode(Node):
         return output
 
 
-register.tag('img_attrs', lambda p,t: ImgAttrs(p,t))
-class ImgAttrs(Node):
+register.tag('img_attrs', lambda p,t: ImgAttrsNode(p,t))
+class ImgAttrsNode(Node):
     usage = 'Expected invocation is {% dimension_attrs img %} where img is the img attrs set by the lazythumb tag'
     def __init__(self, parser, token):
         try:
