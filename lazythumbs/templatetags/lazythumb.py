@@ -87,12 +87,12 @@ class LazythumbNode(Node):
 
 register.tag('img_attrs', lambda p,t: ImgAttrsNode(p,t))
 class ImgAttrsNode(Node):
-    usage = 'Expected invocation is {% dimension_attrs img %} where img is the img attrs set by the lazythumb tag'
+    usage = 'Expected invocation is {% img_attrs img %} where img is the img attrs set by the lazythumb tag'
     def __init__(self, parser, token):
         try:
            _, img = token.contents.split()
         except ValueError:
-            raise TemplateSyntaxError('dimension_attrs: %s' %self.usage)
+            raise TemplateSyntaxError('img_attrs: %s' %self.usage)
         self.img_var = Variable(img)
 
     def render(self, context):
