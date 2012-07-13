@@ -34,7 +34,7 @@ class TestGeometry(TestCase):
         self.assertRaises(self.TestException, geometry_parse, "thumbnail", "x10x", self.TestException)
 
     def test_valid_thumb(self):
-        """ test that thumbnail with 2d or wisth/heigh only works """
+        """ test that thumbnail with 2d or width/height only works """
         h, w = geometry_parse('thumbnail', '10x20', self.TestException)
         self.assertEqual(h, 10)
         self.assertEqual(w, 20)

@@ -56,7 +56,7 @@ class LazyThumbRenderer(View):
         :param action: some action, eg thumbnail or resize
         :param geometry: a string of either '\dx\d' or just '\d'
         :param source_path: the fs path to the image to be manipulated
-        :returns: an HttpResponse with an image/jpeg content_type
+        :returns: an HttpResponse with an image/{format} content_type
         """
 
         # reject naughty paths and actions
@@ -87,7 +87,6 @@ class LazyThumbRenderer(View):
         if was_404 == 1:
             return self.four_oh_four()
 
-
         img_format = get_format(rendered_path)
         # TODO this tangled mess of try/except is hideous... but such is
         # filesystem io? No it can be cleaned up by splitting it out
@@ -113,11 +112,18 @@ class LazyThumbRenderer(View):
                     'format': get_format(rendered_path),
                     'quality': 80,
                 }
+
+                if params['format'] == "JPEG" and pil_img.mode == 'P':
+                    # Cannot save mode 'P' image as JPEG without converting first
+                    # (This can happen if we have a GIF file without an extension and don't scale it)
+                    pil_img = pil_img.convert()
+
                 try:
                     pil_img.save(buf, **params)
                 except IOError:
+                    logger.exception("pil_img.save(%r)" % params)
                     # TODO reevaluate this except when we make options smarter
-                    logger.info("Failed to create new image %s . Trying without options" %rendered_path)
+                    logger.info("Failed to create new image %s . Trying without options" % rendered_path)
                     pil_img.save(buf, format=img_format)
                 raw_data = buf.getvalue()
                 buf.close()
@@ -127,6 +133,7 @@ class LazyThumbRenderer(View):
                     if e.errno == errno.EEXIST:
                         pass # race condition, another WSGI worker wrote file or directory first
                     else:
+                        logger.exception("saving converted image")
                         raise
 
             except (IOError, SuspiciousOperation, ValueError), e:
@@ -231,6 +238,11 @@ class LazyThumbRenderer(View):
         if height > img.size[1]:
             height = img.size[1]
 
+        # PIL is really bad at scaling GIFs. This helps a little with the quality.
+        # (http://python.6.n6.nabble.com/Poor-Image-Quality-When-Resizing-a-GIF-tp2099779.html)
+        if img.mode == "P":
+            img = img.convert(mode="RGB", dither=Image.NONE)
+
         return img.resize((width, height), Image.ANTIALIAS)
 
     def get_pil_from_path(self, img_path):
@@ -273,18 +285,18 @@ class LazyThumbRenderer(View):
     def two_hundred(self, img_data, img_format):
         """
         Generate a 200 image response with raw image data, Cache-Control set,
-        and an image/jpeg content-type.
+        and an image/{img_format} content-type.
 
         :param img_data: raw image data as a string
         """
-        resp = HttpResponse(img_data, content_type='image/%s' %img_format.lower())
+        resp = HttpResponse(img_data, content_type='image/%s' % img_format.lower())
         resp['Cache-Control'] = 'public,max-age=%s' % settings.LAZYTHUMBS_CACHE_TIMEOUT
         return resp
 
     def four_oh_four(self):
         """
         Generate a 404 response with an image/jpeg content_type. Sets a
-        Cahce-Control header for caches like Akamai (browsers will ignore it
+        Cache-Control header for caches like Akamai (browsers will ignore it
         since it's a 4xx.
         """
         resp = HttpResponse(status=404, content_type='image/jpeg')

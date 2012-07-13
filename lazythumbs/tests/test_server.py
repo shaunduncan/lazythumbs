@@ -1,3 +1,6 @@
+import os
+import shutil
+import tempfile
 from unittest import TestCase
 
 from mock import Mock, patch
@@ -16,6 +19,7 @@ class MockImg(object):
     def __init__(self):
         self.called = []
         self.size = (1000, 1000)
+        self.mode = "RGB"
     def resize(self, size, _):
         self.called.append('resize')
         self.size = size
@@ -178,3 +182,46 @@ class GetViewTest(TestCase):
         cached = mc.cache[key]
         self.assertEqual(cached, False)
 
+
+class TestOddFiles(TestCase):
+
+    def test_extensionless_gif(self):
+        """If the image file is a GIF without an extension, we can produce
+        a valid thumbnail for it."""
+
+        # Note: this test image file was breaking thumbnails if lazythumbs didn't
+        # see the .gif extension.  I tried creating a gif on the fly using
+        # PIL but didn't hit the same problem, so it might be something about
+        # this image that's special, maybe that it has a transparent background.
+        # (The error was "cannot write mode P as JPEG"; the symptom was a 404
+        # response.)
+
+        MEDIA_ROOT = tempfile.gettempdir()
+
+        # Need to override MEDIA_ROOT in both django file storage and lazythumbs views
+        # and Django doesn't provide override_settings until 1.4
+        with patch('django.core.files.storage.settings') as settings1:
+            settings1.MEDIA_ROOT = MEDIA_ROOT
+
+            with patch('lazythumbs.views.settings') as settings2:
+                settings2.MEDIA_ROOT = MEDIA_ROOT
+
+                testfile = os.path.join(os.path.dirname(__file__), "testdata", "testimage.gif")
+                filename = None
+                try:
+                    filename = os.path.join(MEDIA_ROOT, "gif_without_extension")
+                    shutil.copy(testfile, filename)
+                    # Now we have a gif file in a filename that doesn't end in .gif
+
+                    renderer = LazyThumbRenderer()
+                    source_path = os.path.relpath(filename, MEDIA_ROOT)
+                    rsp = renderer.get(
+                        request=Mock(path="/thumbnail/x50/" + source_path),
+                        action="thumbnail",
+                        geometry="x50",
+                        source_path=source_path
+                        )
+                    self.assertEqual(200, rsp.status_code)
+                finally:
+                    if filename:
+                        os.remove(filename)

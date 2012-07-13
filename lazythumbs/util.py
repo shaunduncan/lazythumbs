@@ -13,7 +13,7 @@ logger = logging.getLogger()
 def geometry_parse(action, geometry, exc):
     """ Compute width and height from a geometry string
         This is really unpleasant the actions should themselves take care of this
-        for now however everything requires a width or a height. the exc will be raises
+        for now however everything requires a width or a height. the exc will be raised
         if neither can be parsed out of the string.
 
         thumbnail:  returns None for nonexistant dimensions
