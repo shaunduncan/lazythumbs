@@ -51,15 +51,15 @@ class TestGeometry(TestCase):
 
     def test_build_geo_resize(self):
         """ test that build_geometry builds the correct geometry with 2d and width/height only """
-        self.assertEqual(build_geometry('resize', 10, 20), "10x20")
+        self.assertEqual(build_geometry('resize', 10, 20), "10/20")
         self.assertEqual(build_geometry('resize', 10, None), "10")
-        self.assertEqual(build_geometry('resize', None, 20), "x20")
+        self.assertEqual(build_geometry('resize', None, 20), "0/20")
 
     def test_build_geo_thumbnail(self):
         """ test that build_geometry builds the correct geometry with 2d and width/height only """
         self.assertEqual(build_geometry('thumbnail', 10, 20), "10")
         self.assertEqual(build_geometry('thumbnail', 10, None), "10")
-        self.assertEqual(build_geometry('thumbnail', None, 20), "x20")
+        self.assertEqual(build_geometry('thumbnail', None, 20), "0/20")
 
 
 class TestComputeIMG(TestCase):
@@ -88,7 +88,7 @@ class TestComputeIMG(TestCase):
         attrs = compute_img(url, "resize", "200x200")
         self.assertEqual(attrs['height'], '200')
         self.assertEqual(attrs['width'], '200')
-        self.assertEqual(attrs['src'], settings.LAZYTHUMBS_URL + 'lt_cache/resize/200x200/path/img.jpg')
+        self.assertEqual(attrs['src'], settings.LAZYTHUMBS_URL + 'lt_cache/resize/200/200/path/img.jpg')
 
     def test_no_url(self):
         """ If there is no url all attrs shoudl be '' """
@@ -110,7 +110,7 @@ class TestComputeIMG(TestCase):
         """ resize with two dimensions returns the proper path """
         with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=100, height=200)):
             attrs = compute_img(Mock(), 'resize', '5x50')
-            self.assertEqual(attrs['src'], settings.LAZYTHUMBS_URL + 'lt_cache/resize/5x50/path/img.jpg')
+            self.assertEqual(attrs['src'], settings.LAZYTHUMBS_URL + 'lt_cache/resize/5/50/path/img.jpg')
             self.assertEqual(attrs['width'], '5')
             self.assertEqual(attrs['height'], '50')
 
@@ -118,7 +118,7 @@ class TestComputeIMG(TestCase):
         """ resize with only width return the proper path and size """
         with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=100, height=200)):
             attrs = compute_img(Mock(), 'resize', '5')
-            self.assertEqual(attrs['src'], settings.LAZYTHUMBS_URL + 'lt_cache/resize/5x5/path/img.jpg')
+            self.assertEqual(attrs['src'], settings.LAZYTHUMBS_URL + 'lt_cache/resize/5/5/path/img.jpg')
             self.assertEqual(attrs['width'], '5')
             self.assertEqual(attrs['height'], '5')
 
@@ -126,7 +126,7 @@ class TestComputeIMG(TestCase):
         """ resize with only height returns the proper path and size """
         with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=100, height=200)):
             attrs = compute_img(Mock(), 'resize', 'x5')
-            self.assertEqual(attrs['src'], settings.LAZYTHUMBS_URL + 'lt_cache/resize/5x5/path/img.jpg')
+            self.assertEqual(attrs['src'], settings.LAZYTHUMBS_URL + 'lt_cache/resize/5/5/path/img.jpg')
             self.assertEqual(attrs['width'], '5')
             self.assertEqual(attrs['height'], '5')
 

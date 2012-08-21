@@ -39,9 +39,9 @@ def geometry_parse(action, geometry, exc):
 def build_geometry(action, width, height):
     """ this builds a canonical geometry so we don't create the same image twice """
     if width and height and not action == 'thumbnail':
-        return "%sx%s" %(width, height)
+        return "%s/%s" %(width, height)
     if not width:
-        return "x%s" % height
+        return "0/%s" % height
     return str(width)
 
 
