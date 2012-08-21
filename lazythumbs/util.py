@@ -12,6 +12,7 @@ logger = logging.getLogger()
 
 def geometry_parse(action, geometry, exc):
     """ Compute width and height from a geometry string
+        (ex. new '800/600', old '800x600', new 'x/600', old 'x600')
         This is really unpleasant the actions should themselves take care of this
         for now however everything requires a width or a height. the exc will be raised
         if neither can be parsed out of the string.
@@ -20,11 +21,18 @@ def geometry_parse(action, geometry, exc):
         resize/scale: if only one dimension is given the other is set to match it
     """
 
-    width_match = re.match(r'^(\d+)(?:x\d+)?$', geometry)
-    height_match = re.match(r'^(?:\d+)?x(\d+)$', geometry)
+    width_match = re.match(r'^(\d+)\/(?:\d+)?$', geometry)
+    height_match = re.match(r'^(?:\d+|x)?\/(\d+)$', geometry)
 
     if not (width_match or height_match):
-        raise exc
+        ## Check for the original WidthxHeight geometry style for backwards compat.
+        width_match = re.match(r'^(\d+)(?:x\d+)?$', geometry)
+        height_match = re.match(r'^(?:\d+)?x(\d+)$', geometry)
+
+        if (width_match or height_match):
+            logger.info("This is the old style lazythumbs geometry. Concider adapting the new 'Width/Height' syntax")
+        else:
+            raise exc
 
     width = int(width_match.groups()[0]) if width_match else None
     height = int(height_match.groups()[0]) if height_match else None
