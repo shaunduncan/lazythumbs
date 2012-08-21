@@ -53,13 +53,13 @@ class TestGeometry(TestCase):
         """ test that build_geometry builds the correct geometry with 2d and width/height only """
         self.assertEqual(build_geometry('resize', 10, 20), "10/20")
         self.assertEqual(build_geometry('resize', 10, None), "10")
-        self.assertEqual(build_geometry('resize', None, 20), "0/20")
+        self.assertEqual(build_geometry('resize', None, 20), "x/20")
 
     def test_build_geo_thumbnail(self):
         """ test that build_geometry builds the correct geometry with 2d and width/height only """
         self.assertEqual(build_geometry('thumbnail', 10, 20), "10")
         self.assertEqual(build_geometry('thumbnail', 10, None), "10")
-        self.assertEqual(build_geometry('thumbnail', None, 20), "0/20")
+        self.assertEqual(build_geometry('thumbnail', None, 20), "x/20")
 
 
 class TestComputeIMG(TestCase):

@@ -41,7 +41,7 @@ def build_geometry(action, width, height):
     if width and height and not action == 'thumbnail':
         return "%s/%s" %(width, height)
     if not width:
-        return "0/%s" % height
+        return "x/%s" % height
     return str(width)
 
 
