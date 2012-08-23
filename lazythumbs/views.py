@@ -161,7 +161,7 @@ class LazyThumbRenderer(View):
         """
         img = img or self.get_pil_from_path(img_path)
         if not img:
-            raise ValueError('unable to determine find img given args')
+            raise ValueError('unable to find img given args')
 
         source_width = img.size[0]
         source_height = img.size[1]
