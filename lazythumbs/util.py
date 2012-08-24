@@ -30,7 +30,7 @@ def geometry_parse(action, geometry, exc):
         height_match = re.match(r'^(?:\d+)?x(\d+)$', geometry)
 
         if (width_match or height_match):
-            logger.info("This is the old style lazythumbs geometry. Concider adapting the new 'Width/Height' syntax")
+            logger.info("Consider adopting the new 'Width/Height' syntax")
         else:
             raise exc
 
