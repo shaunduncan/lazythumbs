@@ -81,6 +81,7 @@ class ImgAttrsNode(Node):
 register.tag('lt_clientside', lambda p, t: ClientSideNode(p, t))
 class ClientSideNode(Node):
     usage = 'Expected invocation is {% lt_clientside url|ImageFile|Object %}'
+
     def __init__(self, parser, token):
         tse = lambda m: TemplateSyntaxError('lt_clientside: %s' % m)
         bits = token.contents.split()
@@ -93,8 +94,7 @@ class ClientSideNode(Node):
     def render(self, context):
         img_data = compute_img(self.thing, 'resize', '9999')
         img_data['src'] = get_placeholder_url(img_data['src'])
-        return json.dump(img_data);
-
+        return json.dumps(img_data)
 
 
 def literal_or_var(thing):
@@ -117,3 +117,4 @@ def literal_or_var(thing):
         return strip_quotes(thing)
     else:
         return Variable(thing)
+        
