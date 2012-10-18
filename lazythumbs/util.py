@@ -174,6 +174,11 @@ def get_img_url(thing, action, width=None, height=None):
     """
     return get_img_attrs(thing, action, width, height)['src']
 
+
+def get_placeholder_url(thing):
+    src = get_img_attrs(thing, 'resize', '1')['src']
+    return src.replace('resize', '{{ action }}', 1).replace('1x1', '{{ dimensions }}', 1)
+
 def get_img_attrs(thing, action, width='', height=''):
     """ allows us to get a url easier outside of templates
         this just lets compute_img deal with invalid geometries
