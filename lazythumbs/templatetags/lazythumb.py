@@ -38,33 +38,11 @@ class LazythumbNode(Node):
             raise tse('supported actions are %s' % SUPPORTED_ACTIONS)
         self.action = action
 
-        self.thing = self.literal_or_var(thing)
-        self.geometry = self.literal_or_var(geometry)
+        self.thing = literal_or_var(thing)
+        self.geometry = literal_or_var(geometry)
 
         self.nodelist = parser.parse(('endlazythumb',))
         parser.delete_first_token()
-
-    # TODO surely a helper exists for this in Django
-    def literal_or_var(self, thing):
-        """
-        Given some string, return its value without quote delimiters or a
-        Variable object representing the string. For example,
-
-        a = self.literal_or_var('"hello"')
-            a is 'hello'
-        a = self.literal_or_var('hello')
-            a is Variable('hello')
-
-        :param thing: A string of the form "hello", 'hello', or hello
-        :returns: either a Variable or a string
-        """
-        literal_re = '^[\'"].*[\'"]$'
-        strip_quotes = lambda s: re.sub('[\'"]', '', s)
-
-        if re.match(literal_re, thing):
-            return strip_quotes(thing)
-        else:
-            return Variable(thing)
 
     def render(self, context):
 
@@ -97,3 +75,23 @@ class ImgAttrsNode(Node):
 
     def render(self, context):
         return get_attr_string(self.img_var.resolve(context))
+def literal_or_var(thing):
+    """
+    Given some string, return its value without quote delimiters or a
+    Variable object representing the string. For example,
+
+    a = self.literal_or_var('"hello"')
+        a is 'hello'
+    a = self.literal_or_var('hello')
+        a is Variable('hello')
+
+    :param thing: A string of the form "hello", 'hello', or hello
+    :returns: either a Variable or a string
+    """
+    literal_re = '^[\'"].*[\'"]$'
+    strip_quotes = lambda s: re.sub('[\'"]', '', s)
+
+    if re.match(literal_re, thing):
+        return strip_quotes(thing)
+    else:
+        return Variable(thing)
