@@ -69,23 +69,23 @@ class ImgAttrsNode(Node):
     usage = 'Expected invocation is {% img_attrs img %} where img is the img attrs set by the lazythumb tag'
     def __init__(self, parser, token):
         try:
-           _, img = token.contents.split()
+            _, img = token.contents.split()
         except ValueError:
-            raise TemplateSyntaxError('img_attrs: %s' %self.usage)
+            raise TemplateSyntaxError('img_attrs: %s' % self.usage)
         self.img_var = Variable(img)
 
     def render(self, context):
         return get_attr_string(self.img_var.resolve(context))
 
 
-register.tag('lt_clientside', lambda p,t: ClientSideNode(p,t))
+register.tag('lt_clientside', lambda p, t: ClientSideNode(p, t))
 class ClientSideNode(Node):
     usage = 'Expected invocation is {% lt_clientside url|ImageFile|Object %}'
     def __init__(self, parser, token):
         tse = lambda m: TemplateSyntaxError('lt_clientside: %s' % m)
         bits = token.contents.split()
         try:
-           _, thing  = bits
+            _, thing = bits
         except ValueError:
             raise tse(self.usage)
         self.thing = literal_or_var(thing)
