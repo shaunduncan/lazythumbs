@@ -8,9 +8,10 @@
 """
 import logging
 import re
+import json
 
 from django.template import TemplateSyntaxError, Library, Node, Variable
-from lazythumbs.util import compute_img, get_attr_string
+from lazythumbs.util import compute_img, get_attr_string, get_placeholder_url
 
 
 # TODO this should *not* be hardcoded. it completely prevents the proper
@@ -75,6 +76,27 @@ class ImgAttrsNode(Node):
 
     def render(self, context):
         return get_attr_string(self.img_var.resolve(context))
+
+
+register.tag('lt_clientside', lambda p,t: ClientSideNode(p,t))
+class ClientSideNode(Node):
+    usage = 'Expected invocation is {% lt_clientside url|ImageFile|Object %}'
+    def __init__(self, parser, token):
+        tse = lambda m: TemplateSyntaxError('lt_clientside: %s' % m)
+        bits = token.contents.split()
+        try:
+           _, thing  = bits
+        except ValueError:
+            raise tse(self.usage)
+        self.thing = literal_or_var(thing)
+
+    def render(self, context):
+        img_data = compute_img(self.thing, 'resize', '9999')
+        img_data['src'] = get_placeholder_url(img_data['src'])
+        return json.dump(img_data);
+
+
+
 def literal_or_var(thing):
     """
     Given some string, return its value without quote delimiters or a
