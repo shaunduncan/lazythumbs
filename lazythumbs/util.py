@@ -99,14 +99,8 @@ def compute_img(thing, action, geometry):
     source_height = lambda t: quack(t, ['height'], ['photo', 'image'])
     exit = lambda u,w,h: dict(src=urljoin(settings.MEDIA_URL, u), width=str(w or '') ,height= str(h or ''))
 
-    # compute url
-    img_object = None
-    if type(thing) in types.StringTypes:
-        url = thing
-    else:
-        img_object = thing
-        url = quack(img_object, ['name', 'url', 'path'], ['photo', 'image'],'')
-    url = url.replace(settings.MEDIA_URL, '')
+    # compute url and img_object
+    url, img_object = _get_url_img_obj_from_thing(thing)
 
     # early exit if didn't get a url
     if not url:
@@ -209,3 +203,15 @@ def get_attr_string(img):
     """ given an image attr dict like that returned by compute_img or get_img_attrs get the string of height width attrs for an img tag """
     attrs = ['%s="%s"' %attr for attr in img.items() if attr[1]]
     return " ".join(attrs)
+
+def _get_url_img_obj_from_thing(thing):
+    img_object = None
+    if type(thing) in types.StringTypes:
+        url = thing
+    else:
+        img_object = thing
+        url = quack(img_object, ['name', 'url', 'path'], ['photo', 'image'], '')
+
+    url = url.replace(settings.MEDIA_URL, '')
+
+    return (url, img_object)
