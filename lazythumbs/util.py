@@ -10,6 +10,7 @@ logger = logging.getLogger()
 
 LT_IMG_URL_FORMAT = getattr(settings, 'LAZYTHUMBS_URL', '/') + 'lt_cache/%s/%s/%s'
 
+
 def geometry_parse(action, geometry, exc):
     """ Compute width and height from a geometry string
         (ex. new '800/600', old '800x600', new 'x/600', old 'x600')
@@ -47,7 +48,7 @@ def geometry_parse(action, geometry, exc):
 def build_geometry(action, width, height):
     """ this builds a canonical geometry so we don't create the same image twice """
     if width and height and not action == 'thumbnail':
-        return "%s/%s" %(width, height)
+        return "%s/%s" % (width, height)
     if not width:
         return "x/%s" % height
     return str(width)
@@ -79,7 +80,7 @@ def quack(thing, properties, levels=[], default=None):
     """
     if thing is None:
         return default
-    to_search = [thing] + filter(None, [getattr(thing,l,None) for l in levels])
+    to_search = [thing] + filter(None, [getattr(thing, l, None) for l in levels])
     first = lambda f, xs, d: (chain((x for x in xs if f(x)), [d])).next()
 
     for t in to_search:
@@ -137,7 +138,6 @@ def compute_img(thing, action, geometry):
                 if s_h:
                     height = scale(s_h, width, s_w)
 
-
     # if it's possible to compute source dimensions there's a potential
     # early exit here. if we can tell the new image would have the
     # same/bigger dimensions, just use the image's info and don't make a
@@ -152,7 +152,6 @@ def compute_img(thing, action, geometry):
         if _source_smaller(width, s_w) and _source_smaller(height, s_h):
             return exit(url, s_w, s_h)
 
-
     geometry = build_geometry(action, width, height)
     src = '%slt_cache/%s/%s/%s' % (getattr(settings, 'LAZYTHUMBS_URL', '/'), action, geometry, url)
 
@@ -160,6 +159,7 @@ def compute_img(thing, action, geometry):
         src = 'http://placekitten.com/%s/%s' % (width, height)
 
     return exit(src, width, height)
+
 
 def get_img_url(thing, action, width=None, height=None):
     """ return only the src.
