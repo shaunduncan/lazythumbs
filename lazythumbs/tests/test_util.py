@@ -4,7 +4,7 @@ from mock import patch, Mock
 
 from django.conf import settings
 from lazythumbs.util import geometry_parse, build_geometry, compute_img, get_img_attrs
-from lazythumbs.util import get_format, get_attr_string
+from lazythumbs.util import get_format, get_attr_string, get_placeholder_url, LT_IMG_URL_FORMAT
 
 class TestGeometry(TestCase):
     class TestException:
@@ -224,3 +224,14 @@ class TestGetAttrString(TestCase):
         self.assertFalse('width' in attr_str)
         self.assertFalse('height' in attr_str)
         self.assertTrue('src="http://path.jpg"' in attr_str)
+
+class TestGetPlaceholderUrl(TestCase):
+
+    def test_local_url(self):
+        path = 'path/img.jpg'
+        expected = LT_IMG_URL_FORMAT % ('{{ action }}', '{{ dimensions }}', path)
+        self.assertEqual(get_placeholder_url(path), expected)
+
+    def test_foreign_url(self):
+        path = 'http://path.com/img.jpg'
+        self.assertEqual(get_placeholder_url(path), path)
