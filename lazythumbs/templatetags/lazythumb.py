@@ -11,7 +11,7 @@ import re
 import json
 
 from django.template import TemplateSyntaxError, Library, Node, Variable
-from lazythumbs.util import compute_img, get_attr_string, get_placeholder_url
+from lazythumbs.util import compute_img, get_attr_string, get_placeholder_url, get_source_img_attrs
 
 
 # TODO this should *not* be hardcoded. it completely prevents the proper
@@ -92,8 +92,11 @@ class ClientSideNode(Node):
         self.thing = literal_or_var(thing)
 
     def render(self, context):
-        img_data = compute_img(self.thing, 'resize', '9999')
-        img_data['src'] = get_placeholder_url(img_data['src'])
+        thing = self.thing
+        if type(thing) == Variable:
+            thing = thing.resolve(context)
+        img_data = get_source_img_attrs(thing)
+        img_data['src'] = get_placeholder_url(thing)
         return json.dumps(img_data)
 
 
@@ -117,4 +120,3 @@ def literal_or_var(thing):
         return strip_quotes(thing)
     else:
         return Variable(thing)
-        
