@@ -1,9 +1,8 @@
 from unittest import TestCase
 
 from django.template import TemplateSyntaxError, VariableDoesNotExist, Variable
-from django.conf import settings
 
-from mock import Mock
+from mock import Mock, patch
 
 import json
 
@@ -291,13 +290,13 @@ class ClientSideRenderTest(LazythumbsTemplateTagTestCase):
         self.PseudoPhoto = PseudoPhoto
         self.PseudoImageFile = PseudoImageFile
 
-    def test_thing_like_IF_render(self):
+    @patch('django.conf.settings')
+    def test_thing_like_IF_render(self, settings):
         """
         test behaviour for when url does not resolve to a string but rather
         an object that nests an ImageFile-like object
         """
-        old_media_url = settings.MEDIA_URL
-        settings.MEDIA_URL = '/media/'
+        settings.MEDIA_URL.return_value = '/media/'
         node = node_factory(ClientSideNode, "tag img_file")
         self.context['img_file'] = self.PseudoImageFile(1000, 500)
         self.context['img_file'].name = 'image_path/image.jpg'
@@ -310,5 +309,3 @@ class ClientSideRenderTest(LazythumbsTemplateTagTestCase):
         self.assertTrue('image_path' in result['src'])
         self.assertTrue('{{ action }}' in result['src'])
         self.assertTrue('{{ dimensions }}' in result['src'])
-
-        settings.MEDIA_URL = old_media_url
