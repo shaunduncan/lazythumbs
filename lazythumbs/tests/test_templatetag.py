@@ -1,10 +1,13 @@
 from unittest import TestCase
 
 from django.template import TemplateSyntaxError, VariableDoesNotExist, Variable
+from django.conf import settings
 
 from mock import Mock
 
-from lazythumbs.templatetags.lazythumb import LazythumbNode, ImgAttrsNode
+import json
+
+from lazythumbs.templatetags.lazythumb import LazythumbNode, ImgAttrsNode, ClientSideNode
 
 
 def node_factory(node, invocation):
@@ -280,3 +283,32 @@ class ImgAttrsRenderTest(LazythumbsTemplateTagTestCase):
 
         self.assertEqual(output, 'src="test.png" height="49" width="50"')
 
+
+class ClientSideRenderTest(LazythumbsTemplateTagTestCase):
+
+    def setUp(self):
+        super(ClientSideRenderTest, self).setUp()
+        self.PseudoPhoto = PseudoPhoto
+        self.PseudoImageFile = PseudoImageFile
+
+    def test_thing_like_IF_render(self):
+        """
+        test behaviour for when url does not resolve to a string but rather
+        an object that nests an ImageFile-like object
+        """
+        old_media_url = settings.MEDIA_URL
+        settings.MEDIA_URL = '/media/'
+        node = node_factory(ClientSideNode, "tag img_file")
+        self.context['img_file'] = self.PseudoImageFile(1000, 500)
+        self.context['img_file'].name = 'image_path/image.jpg'
+        result = json.loads(node.render(self.mock_cxt))
+
+        print result
+
+        self.assertEqual(result['width'], 1000)
+        self.assertEqual(result['height'], 500)
+        self.assertTrue('image_path' in result['src'])
+        self.assertTrue('{{ action }}' in result['src'])
+        self.assertTrue('{{ dimensions }}' in result['src'])
+
+        settings.MEDIA_URL = old_media_url
