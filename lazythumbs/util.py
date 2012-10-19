@@ -124,7 +124,7 @@ def compute_img(thing, action, geometry):
     # other dim to match our target dim.
     # TODO puke
     if action == 'thumbnail':
-        if img_object: # if we didn't get an obj there's nothing we can do
+        if img_object:  # if we didn't get an obj there's nothing we can do
             scale = lambda a, b, c: int(a * (float(b) / c))
             if not width:
                 s_w = source_width(img_object)
@@ -181,8 +181,9 @@ def get_img_attrs(thing, action, width='', height=''):
     if width and not height:
         geometry = str(width)
     else:
-        geometry = "%sx%s" %(width or '', height)
+        geometry = "%sx%s" % (width or '', height)
     return compute_img(thing, action, geometry)
+
 
 def get_format(file_path):
     """ This gets a PIL image format string from a file name
@@ -196,12 +197,12 @@ def get_format(file_path):
         try:
             fmt = Image.EXTENSION[ext]
         except KeyError:
-            return "JPEG" # if we don't recognize the format, assume JPEG
+            return "JPEG"  # if we don't recognize the format, assume JPEG
     return fmt
 
 def get_attr_string(img):
     """ given an image attr dict like that returned by compute_img or get_img_attrs get the string of height width attrs for an img tag """
-    attrs = ['%s="%s"' %attr for attr in img.items() if attr[1]]
+    attrs = ['%s="%s"' % attr for attr in img.items() if attr[1]]
     return " ".join(attrs)
 
 def _get_url_img_obj_from_thing(thing):
