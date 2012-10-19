@@ -3,7 +3,7 @@ from mock import patch, Mock
 
 
 from django.conf import settings
-from lazythumbs.util import geometry_parse, build_geometry, compute_img, get_img_attrs
+from lazythumbs.util import geometry_parse, build_geometry, compute_img, get_img_attrs, get_source_img_attrs
 from lazythumbs.util import get_format, get_attr_string, get_placeholder_url, LT_IMG_URL_FORMAT
 
 class TestGeometry(TestCase):
@@ -192,6 +192,7 @@ class TestGetFormat(TestCase):
     def test_png(self):
         self.assertEqual(get_format("path/img.png"), 'PNG')
 
+
 class TestGetAttrString(TestCase):
     def test_both(self):
         """ make sure the attr string has both if both are given """
@@ -225,6 +226,7 @@ class TestGetAttrString(TestCase):
         self.assertFalse('height' in attr_str)
         self.assertTrue('src="http://path.jpg"' in attr_str)
 
+
 class TestGetPlaceholderUrl(TestCase):
 
     def test_local_url(self):
@@ -235,3 +237,25 @@ class TestGetPlaceholderUrl(TestCase):
     def test_foreign_url(self):
         path = 'http://path.com/img.jpg'
         self.assertEqual(get_placeholder_url(path), path)
+
+
+class TestGetSourceImgAttrs(TestCase):
+
+    def test_valid_object(self):
+        img = Mock()
+        img.height = 100
+        img.width = 50
+
+        attrs = get_source_img_attrs(img)
+
+        self.assertEqual(attrs['height'], 100)
+        self.assertEqual(attrs['width'], 50)
+
+    def test_invalid_object(self):
+
+        img = 'foo'
+
+        attrs = get_source_img_attrs(img)
+
+        self.assertEqual(attrs['height'], None)
+        self.assertEqual(attrs['width'], None)
