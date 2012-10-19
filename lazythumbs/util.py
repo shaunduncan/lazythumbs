@@ -98,7 +98,7 @@ def compute_img(thing, action, geometry):
     # source dimensions if we can avoid it.
     source_width = lambda t: quack(t, ['width'], ['photo', 'image'])
     source_height = lambda t: quack(t, ['height'], ['photo', 'image'])
-    exit = lambda u,w,h: dict(src=urljoin(settings.MEDIA_URL, u), width=str(w or '') ,height= str(h or ''))
+    exit = lambda u, w, h: dict(src=urljoin(settings.MEDIA_URL, u), width=str(w or ''), height=str(h or ''))
 
     # compute url and img_object
     url, img_object = _get_url_img_obj_from_thing(thing)
@@ -153,7 +153,7 @@ def compute_img(thing, action, geometry):
             return exit(url, s_w, s_h)
 
     geometry = build_geometry(action, width, height)
-    src = '%slt_cache/%s/%s/%s' % (getattr(settings, 'LAZYTHUMBS_URL', '/'), action, geometry, url)
+    src = LT_IMG_URL_FORMAT % (action, geometry, url)
 
     if getattr(settings, 'LAZYTHUMBS_DUMMY', False):
         src = 'http://placekitten.com/%s/%s' % (width, height)
