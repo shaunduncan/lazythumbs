@@ -24,6 +24,18 @@ class LazythumbsTemplateTagTestCase(TestCase):
         self.mock_cxt = mock_cxt
 
 
+class PseudoImageFile(object):
+    def __init__(self, w, h):
+        self.width = w
+        self.height = h
+        self.name = 'image_path'
+
+
+class PseudoPhoto(object):
+    def __init__(self, w, h):
+        self.photo = PseudoImageFile(w, h)
+
+
 class LazythumbSyntaxTest(TestCase):
     """ Test the arg validation of the template tag. """
     def test_too_many_args(self):
@@ -63,21 +75,9 @@ class LazythumbGeometryCompileTest(TestCase):
 class LazythumbRenderTest(LazythumbsTemplateTagTestCase):
     """ test behavior of template tag's output """
     def setUp(self):
-
         super(LazythumbRenderTest, self).setUp()
-
-        class PseudoImageFile(object):
-            def __init__(self, w, h):
-                self.width = w
-                self.height = h
-                self.name = 'image_path'
-
-        class PseudoPhoto(object):
-            def __init__(self, w, h):
-                self.photo = PseudoImageFile(w,h)
-
-        self.PseudoImageFile = PseudoImageFile
         self.PseudoPhoto = PseudoPhoto
+        self.PseudoImageFile = PseudoImageFile
 
     def test_valid_basic(self):
         """ ensure sanity in the simplest case """
