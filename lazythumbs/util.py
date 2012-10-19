@@ -8,7 +8,7 @@ from django.conf import settings
 
 logger = logging.getLogger()
 
-
+LT_IMG_URL_FORMAT = getattr(settings, 'LAZYTHUMBS_URL', '/') + 'lt_cache/%s/%s/%s'
 
 def geometry_parse(action, geometry, exc):
     """ Compute width and height from a geometry string
