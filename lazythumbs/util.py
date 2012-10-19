@@ -170,8 +170,15 @@ def get_img_url(thing, action, width=None, height=None):
 
 
 def get_placeholder_url(thing):
-    src = get_img_attrs(thing, 'resize', '1')['src']
-    return src.replace('resize', '{{ action }}', 1).replace('1x1', '{{ dimensions }}', 1)
+    """ return a lt_cache URL with placeholders for action and dimensions """
+    url, _ = _get_url_img_obj_from_thing(thing)
+
+    parsed = urlparse(url)
+    if parsed.scheme or parsed.netloc:
+        return url
+
+    return LT_IMG_URL_FORMAT % ('{{ action }}', '{{ dimensions }}', url)
+
 
 def get_img_attrs(thing, action, width='', height=''):
     """ allows us to get a url easier outside of templates
