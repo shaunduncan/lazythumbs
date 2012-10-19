@@ -12,13 +12,14 @@ def node_factory(node, invocation):
     mt.contents = invocation
     return node(Mock(), mt)
 
+
 class LazythumbsTemplateTagTestCase(TestCase):
     def setUp(self):
         # NOTE this context will not push and pop so we can inspect it
         self.context = {}
         mock_cxt = Mock()
-        mock_cxt.__getitem__ = lambda _,x: self.context[x]
-        mock_cxt.__setitem__ = lambda _,x,y: self.context.__setitem__(x,y)
+        mock_cxt.__getitem__ = lambda _, x: self.context[x]
+        mock_cxt.__setitem__ = lambda _, x, y: self.context.__setitem__(x, y)
 
         self.mock_cxt = mock_cxt
 
@@ -49,6 +50,7 @@ class LazythumbSyntaxTest(TestCase):
         self.assertEqual(type(node.thing), Variable)
         self.assertEqual(node.thing.var, 'url')
 
+
 class LazythumbGeometryCompileTest(TestCase):
     """ test handling of geometry argument for each action """
 
@@ -56,6 +58,7 @@ class LazythumbGeometryCompileTest(TestCase):
         node = node_factory(LazythumbNode, "tag url thumbnail geo as as_var")
         self.assertEqual(type(node.geometry), Variable)
         self.assertEqual(node.geometry.var, 'geo')
+
 
 class LazythumbRenderTest(LazythumbsTemplateTagTestCase):
     """ test behavior of template tag's output """
@@ -263,6 +266,7 @@ class LazythumbRenderTest(LazythumbsTemplateTagTestCase):
         node = node_factory(LazythumbNode, "tag img_file resize '48x48' as img_tag")
         self.assertRaises(VariableDoesNotExist, node.render, (node, {}))
 
+
 class ImgAttrsRenderTest(LazythumbsTemplateTagTestCase):
     """ test behavior of template tag's output """
 
@@ -275,3 +279,4 @@ class ImgAttrsRenderTest(LazythumbsTemplateTagTestCase):
         output = node.render(self.mock_cxt)
 
         self.assertEqual(output, 'src="test.png" height="49" width="50"')
+
