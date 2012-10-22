@@ -82,6 +82,16 @@ class ImgAttrsNode(Node):
 
 register.tag('lt_clientside', lambda p, t: ClientSideNode(p, t))
 class ClientSideNode(Node):
+    """
+    Used in script tag to output an object literal containing the lt_cache img src
+    with placeholders for lazythumb action (resize|thumbnail) and dimensions.
+    Invoke like so: var img = {% lt_clientside photo_obj %};
+    Outputs: var img = {
+        "width": 400,
+        "height": 300,
+        "src": "/media/lt/lt_cache/{action}/{dimensions}/path/to/img.jpg"
+    };
+    """
     usage = 'Expected invocation is {% lt_clientside url|ImageFile|Object %}'
 
     def __init__(self, parser, token):
