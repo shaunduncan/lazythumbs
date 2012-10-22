@@ -21,15 +21,16 @@ SUPPORTED_ACTIONS = ['thumbnail', 'resize']
 register = Library()
 logger = logging.getLogger()
 
-register.tag('lazythumb', lambda p,t: LazythumbNode(p,t))
+register.tag('lazythumb', lambda p, t: LazythumbNode(p, t))
 class LazythumbNode(Node):
     usage = 'Expected invocation is {% lazythumb url|ImageFile|Object action geometry as variable %}'
+
     def __init__(self, parser, token):
         # simple alias
         tse = lambda m: TemplateSyntaxError('lazythumb: %s' % m)
         bits = token.contents.split()
         try:
-           _, thing, action, geometry, _, as_var = bits
+            _, thing, action, geometry, _, as_var = bits
         except ValueError:
             raise tse(self.usage)
 
@@ -64,9 +65,10 @@ class LazythumbNode(Node):
         return output
 
 
-register.tag('img_attrs', lambda p,t: ImgAttrsNode(p,t))
+register.tag('img_attrs', lambda p, t: ImgAttrsNode(p, t))
 class ImgAttrsNode(Node):
     usage = 'Expected invocation is {% img_attrs img %} where img is the img attrs set by the lazythumb tag'
+
     def __init__(self, parser, token):
         try:
             _, img = token.contents.split()
