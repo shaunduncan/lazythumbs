@@ -47,9 +47,14 @@ def geometry_parse(action, geometry, exc):
 
 def build_geometry(action, width, height):
     """ this builds a canonical geometry so we don't create the same image twice """
+    separator = '/'
+    if getattr(settings, 'LAZYTHUMBS_USE_X_FOR_DIMENSIONS', False):
+        separator = 'x'
     if width and height and not action == 'thumbnail':
-        return "%s/%s" % (width, height)
-    if not width:
+        return ("%s%s%s" % (width, separator, height))
+    if not width and separator == 'x':
+        return "x%s" % height
+    elif not width:
         return "x/%s" % height
     return str(width)
 
