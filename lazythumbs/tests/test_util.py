@@ -61,6 +61,22 @@ class TestGeometry(TestCase):
         self.assertEqual(build_geometry('thumbnail', 10, None), "10")
         self.assertEqual(build_geometry('thumbnail', None, 20), "x/20")
 
+    @patch('lazythumbs.util.settings')
+    def test_build_geo_with_x_dim_resize(self, settings):
+        settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = True
+        """ test that build_geometry builds the correct geometry with 2d and width/height only """
+        self.assertEqual(build_geometry('resize', 10, 20), "10x20")
+        self.assertEqual(build_geometry('resize', 10, None), "10")
+        self.assertEqual(build_geometry('resize', None, 20), "x20")
+
+    @patch('lazythumbs.util.settings')
+    def test_build_geo_with_x_dim_thumbnail(self, settings):
+        settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = True
+        """ test that build_geometry builds the correct geometry with 2d and width/height only """
+        self.assertEqual(build_geometry('thumbnail', 10, 20), "10")
+        self.assertEqual(build_geometry('thumbnail', 10, None), "10")
+        self.assertEqual(build_geometry('thumbnail', None, 20), "x20")
+
 
 class TestComputeIMG(TestCase):
 
