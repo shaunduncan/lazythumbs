@@ -40,23 +40,17 @@ class LazythumbNode(Node):
             raise tse('supported actions are %s' % SUPPORTED_ACTIONS)
         self.action = action
 
-        self.thing = literal_or_var(thing)
-        self.geometry = literal_or_var(geometry)
+        self.thing = Variable(thing)
+        self.geometry = Variable(geometry)
 
         self.nodelist = parser.parse(('endlazythumb',))
         parser.delete_first_token()
 
     def render(self, context):
 
-        thing = self.thing
-        if type(thing) == Variable:
-            thing = thing.resolve(context)
+        thing = self.thing.resolve(context)
         action = self.action
-        if type(action) == Variable:
-            action = action.resolve(context)
-        geometry = self.geometry
-        if type(geometry) == Variable:
-            geometry = geometry.resolve(context)
+        geometry = self.geometry.resolve(context)
 
         context.push()
         context[self.as_var] = compute_img(thing, action, geometry)
@@ -108,25 +102,3 @@ class ClientSideNode(Node):
         img_data = get_source_img_attrs(thing)
         img_data['src'] = get_placeholder_url(thing)
         return json.dumps(img_data)
-
-
-def literal_or_var(thing):
-    """
-    Given some string, return its value without quote delimiters or a
-    Variable object representing the string. For example,
-
-    a = self.literal_or_var('"hello"')
-        a is 'hello'
-    a = self.literal_or_var('hello')
-        a is Variable('hello')
-
-    :param thing: A string of the form "hello", 'hello', or hello
-    :returns: either a Variable or a string
-    """
-    literal_re = '^[\'"].*[\'"]$'
-    strip_quotes = lambda s: re.sub('[\'"]', '', s)
-
-    if re.match(literal_re, thing):
-        return strip_quotes(thing)
-    else:
-        return Variable(thing)
