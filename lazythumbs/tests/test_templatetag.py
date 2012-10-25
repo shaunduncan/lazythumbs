@@ -57,7 +57,7 @@ class LazythumbSyntaxTest(TestCase):
 
     def test_url_str(self):
         node = node_factory(LazythumbNode, "tag 'url' resize '30x30' as as_var")
-        self.assertEqual(node.thing, 'url')
+        self.assertEqual(node.thing.var, "'url'")
 
     def test_url_var(self):
         node = node_factory(LazythumbNode, "tag url resize '30x30' as as_var")
@@ -90,7 +90,6 @@ class LazythumbRenderTest(LazythumbsTemplateTagTestCase):
         img_tag = self.context['img_tag']
         self.assertEqual(img_tag['width'], '48')
         self.assertEqual(img_tag['height'], '50')
-        print img_tag['src']
         self.assertTrue('url' in img_tag['src'])
 
     def test_resize_invalid_geo(self):
@@ -301,8 +300,6 @@ class ClientSideRenderTest(LazythumbsTemplateTagTestCase):
         self.context['img_file'] = self.PseudoImageFile(1000, 500)
         self.context['img_file'].name = 'image_path/image.jpg'
         result = json.loads(node.render(self.mock_cxt))
-
-        print result
 
         self.assertEqual(result['width'], 1000)
         self.assertEqual(result['height'], 500)
