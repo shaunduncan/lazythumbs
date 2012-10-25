@@ -101,12 +101,10 @@ class ClientSideNode(Node):
             _, thing = bits
         except ValueError:
             raise tse(self.usage)
-        self.thing = literal_or_var(thing)
+        self.thing = Variable(thing)
 
     def render(self, context):
-        thing = self.thing
-        if type(thing) == Variable:
-            thing = thing.resolve(context)
+        thing = self.thing.resolve(context)
         img_data = get_source_img_attrs(thing)
         img_data['src'] = get_placeholder_url(thing)
         return json.dumps(img_data)
