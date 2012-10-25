@@ -227,7 +227,7 @@ def get_source_img_attrs(thing):
 
 def _get_url_img_obj_from_thing(thing):
     img_object = None
-    if type(thing) in types.StringTypes:
+    if isinstance(thing, basestring):
         url = thing
     else:
         img_object = thing
