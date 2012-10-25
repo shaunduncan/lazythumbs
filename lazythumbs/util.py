@@ -1,4 +1,6 @@
-import logging, os, re, types
+import logging
+import os
+import re
 from functools import partial
 from itertools import chain
 from urlparse import urljoin, urlparse
@@ -53,8 +55,10 @@ def build_geometry(action, width, height):
     if width and height and not action == 'thumbnail':
         return ("%s%s%s" % (width, separator, height))
     if not width and separator == 'x':
+        # Old URL format for height-only dimensions
         return "x%s" % height
     elif not width:
+        # New URL format for height-only dimensions
         return "x/%s" % height
     return str(width)
 
