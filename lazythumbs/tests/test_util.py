@@ -51,15 +51,21 @@ class TestGeometry(TestCase):
 
     def test_build_geo_resize(self):
         """ test that build_geometry builds the correct geometry with 2d and width/height only """
+        old_x_for_dim = getattr(settings, 'LAZYTHUMBS_USE_X_FOR_DIMENSIONS', None)
+        settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = False
         self.assertEqual(build_geometry('resize', 10, 20), "10/20")
         self.assertEqual(build_geometry('resize', 10, None), "10")
         self.assertEqual(build_geometry('resize', None, 20), "x/20")
+        settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = old_x_for_dim
 
     def test_build_geo_thumbnail(self):
         """ test that build_geometry builds the correct geometry with 2d and width/height only """
+        old_x_for_dim = getattr(settings, 'LAZYTHUMBS_USE_X_FOR_DIMENSIONS', None)
+        settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = False
         self.assertEqual(build_geometry('thumbnail', 10, 20), "10")
         self.assertEqual(build_geometry('thumbnail', 10, None), "10")
         self.assertEqual(build_geometry('thumbnail', None, 20), "x/20")
+        settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = old_x_for_dim
 
     @patch('lazythumbs.util.settings')
     def test_build_geo_with_x_dim_resize(self, settings):
@@ -100,11 +106,14 @@ class TestComputeIMG(TestCase):
 
     def test_local_url(self):
         """ if thing is a url and it's local we can attempt to resize it """
+        old_x_for_dim = getattr(settings, 'LAZYTHUMBS_USE_X_FOR_DIMENSIONS', None)
+        settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = False
         url = settings.MEDIA_URL + 'path/img.jpg'
         attrs = compute_img(url, "resize", "200x200")
         self.assertEqual(attrs['height'], '200')
         self.assertEqual(attrs['width'], '200')
         self.assertEqual(attrs['src'], settings.LAZYTHUMBS_URL + 'lt_cache/resize/200/200/path/img.jpg')
+        settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = old_x_for_dim
 
     def test_no_url(self):
         """ If there is no url all attrs shoudl be '' """
@@ -124,30 +133,41 @@ class TestComputeIMG(TestCase):
 
     def test_2d_resize(self):
         """ resize with two dimensions returns the proper path """
+        old_x_for_dim = getattr(settings, 'LAZYTHUMBS_USE_X_FOR_DIMENSIONS', None)
+        settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = False
         with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=100, height=200)):
             attrs = compute_img(Mock(), 'resize', '5x50')
             self.assertEqual(attrs['src'], settings.LAZYTHUMBS_URL + 'lt_cache/resize/5/50/path/img.jpg')
             self.assertEqual(attrs['width'], '5')
             self.assertEqual(attrs['height'], '50')
+        settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = old_x_for_dim
 
     def test_width_resize(self):
         """ resize with only width return the proper path and size """
+        old_x_for_dim = getattr(settings, 'LAZYTHUMBS_USE_X_FOR_DIMENSIONS', None)
+        settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = False
         with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=100, height=200)):
             attrs = compute_img(Mock(), 'resize', '5')
             self.assertEqual(attrs['src'], settings.LAZYTHUMBS_URL + 'lt_cache/resize/5/5/path/img.jpg')
             self.assertEqual(attrs['width'], '5')
             self.assertEqual(attrs['height'], '5')
+        settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = old_x_for_dim
 
     def test_height_resize(self):
         """ resize with only height returns the proper path and size """
+        old_x_for_dim = getattr(settings, 'LAZYTHUMBS_USE_X_FOR_DIMENSIONS', None)
+        settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = False
         with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=100, height=200)):
             attrs = compute_img(Mock(), 'resize', 'x5')
             self.assertEqual(attrs['src'], settings.LAZYTHUMBS_URL + 'lt_cache/resize/5/5/path/img.jpg')
             self.assertEqual(attrs['width'], '5')
             self.assertEqual(attrs['height'], '5')
+        settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = old_x_for_dim
 
     def test_thumb_both(self):
         """ thumbnail with both dimensions works """
+        old_x_for_dim = getattr(settings, 'LAZYTHUMBS_USE_X_FOR_DIMENSIONS', None)
+        settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = False
         with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=100, height=200)):
             attrs = compute_img(Mock(), 'thumbnail', '5x5')
             self.assertEqual(attrs['src'], settings.LAZYTHUMBS_URL + 'lt_cache/thumbnail/5/path/img.jpg')
