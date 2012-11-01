@@ -6,6 +6,8 @@ from unittest import TestCase
 from mock import Mock, patch
 
 from lazythumbs.views import LazyThumbRenderer, action
+from lazythumbs.urls import urlpatterns
+from django.core.urlresolvers import reverse, resolve
 
 
 class MockCache(object):
@@ -233,3 +235,40 @@ class TestOddFiles(TestCase):
                 finally:
                     if filename:
                         os.remove(filename)
+
+
+def test_paths(routes_to_test=()):
+    for route in routes_to_test:
+        path = route["url_path"]
+        pattern = route["pattern_name"]
+
+        # if kwparams:
+        #     yield reverse(pattern, kwargs=kwparams), path
+        # else:
+        #     yield reverse(pattern), path
+
+        yield resolve(path).url_name, pattern
+
+
+class TestUrlMatching(TestCase):
+    """
+    Test that urls that are built by the template tag are properly matched by
+    the lazythumbs.urls.urlpatterns
+    """
+
+    def setUp(self):
+        self.routes_to_test = (
+            dict(url_path='/lt/lt_cache/resize/5/p/i.jpg', pattern_name='lt_slash_sep'),
+            dict(url_path='/lt/lt_cache/resize/5/5/p/i.jpg', pattern_name='lt_slash_sep'),
+            dict(url_path='/lt/lt_cache/resize/5x5/p/i.jpg', pattern_name='lt_x_sep'),
+            dict(url_path='/lt/lt_cache/resize/x/5/p/i.jpg', pattern_name='lt_x_width')
+        )
+
+    @patch('django.conf.settings')
+    def test_url_matching(self, settings):
+        settings.ROOT_URLCONF = urlpatterns
+        routes_tested = 0
+        for path1, path2 in test_paths(self.routes_to_test):
+            routes_tested += 1
+            self.assertEqual(path1, path2)
+        self.assertEqual(routes_tested, 4)
