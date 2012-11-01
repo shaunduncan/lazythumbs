@@ -7,23 +7,29 @@ from mock import Mock, patch
 
 from lazythumbs.views import LazyThumbRenderer, action
 
+
 class MockCache(object):
     def __init__(self):
         self.cache = {}
+
     def set(self, key, value, expiration=None):
         self.cache[key] = value
+
     def get(self, key, default=None):
         return self.cache.get(key)
+
 
 class MockImg(object):
     def __init__(self):
         self.called = []
         self.size = (1000, 1000)
         self.mode = "RGB"
+
     def resize(self, size, _):
         self.called.append('resize')
         self.size = size
         return self
+
     def crop(self, dimensions):
         self.called.append('crop')
         return self
@@ -107,6 +113,7 @@ class RenderTest(TestCase):
         self.assertEqual(img.size[0], 1000)
         self.assertEqual(img.size[1], 1000)
         self.assertEqual(len(mock_img.called), 0)
+
 
 class GetViewTest(TestCase):
     """ Test behavior of LazyThumbRenderer.get """
