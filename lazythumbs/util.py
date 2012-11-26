@@ -123,7 +123,7 @@ def compute_img(thing, action, geometry):
 
     # If this is a responsive image, we only need to provide a placeholder for the moment
     if geometry == 'responsive':
-        return exit(get_placeholder_url(thing), None, None, responsive=True)
+        return exit(get_placeholder_url(thing), source_width(thing), source_height(thing), responsive=True)
 
     # extract/ensure width & height
     # It's okay to end up with '' for one of the dimensions in the case of thumbnail
@@ -228,6 +228,7 @@ def get_attr_string(img):
         img.setdefault('class', '')
         img['class'] += ' lt-responsive-img'
         img['data-urltemplate'] = img['src']
+        # This is a 1x1 transparent GIF
         img['src'] = "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
     attrs = ['%s="%s"' % attr for attr in img.items() if attr[1]]
     return " ".join(attrs)

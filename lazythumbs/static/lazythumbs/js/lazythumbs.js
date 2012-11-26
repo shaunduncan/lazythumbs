@@ -18,7 +18,11 @@ var lazythumbs = {
             // or if the image has increased in size.
             if (e.type === 'load') {
                 needs_loaded = true;
+                img.dataset['ltmaxwidth'] = img.getAttribute('width');
+                img.dataset['ltmaxheight'] = img.getAttribute('height');
             } else {
+                width = Math.min(width, img.dataset['ltmaxwidth']);
+                height = Math.min(height, img.dataset['ltmaxheight']);
                 var wdelta = width - img.dataset['ltwidth'];
                 var hdelta = height - img.dataset['ltheight'];
                 if (wdelta > lazythumbs.FETCH_STEP_MIN || hdelta > lazythumbs.FETCH_STEP_MIN) {
