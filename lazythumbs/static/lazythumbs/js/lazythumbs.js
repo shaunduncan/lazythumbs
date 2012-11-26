@@ -1,4 +1,6 @@
-var lazythumbs = {};
+var lazythumbs = {
+    FETCH_STEP_MIN: 50
+};
 (function(lazythumbs){
 
     window.addEventListener("resize", update_responsive_images, false);
@@ -7,17 +9,19 @@ var lazythumbs = {};
         var responsive_images = document.getElementsByClassName('lt-responsive-img');
         var img, i, width, height, needs_loaded, url_template;
 
-        console.log("Looking for responsive images...");
-
         for (i=0; i < responsive_images.length; i++) {
             img = responsive_images[i];
             width = img.clientWidth;
             height = img.clientHeight;
 
+            // We want to load the image if this is the page load event
+            // or if the image has increased in size.
             if (e.type === 'load') {
                 needs_loaded = true;
             } else {
-                if (width > img.dataset['ltwidth'] || height > img.dataset['ltheight']) {
+                var wdelta = width - img.dataset['ltwidth'];
+                var hdelta = height - img.dataset['ltheight'];
+                if (wdelta > lazythumbs.FETCH_STEP_MIN || hdelta > lazythumbs.FETCH_STEP_MIN) {
                     needs_loaded = true;
                 }
             }
@@ -37,12 +41,12 @@ var lazythumbs = {};
                         existing_img.src = new_image.src;  
                     }
                 })(img);
-            }
 
-            img.dataset['ltwidth'] = width;
-            img.dataset['ltheight'] = height;
+                img.dataset['ltwidth'] = width;
+                img.dataset['ltheight'] = height;
+            }
         }
-    }
+    };
 
     window.addEventListener('load', setup_responsive_images, false);
     function setup_responsive_images() {
