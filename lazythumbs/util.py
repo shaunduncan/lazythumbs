@@ -107,7 +107,7 @@ def compute_img(thing, action, geometry):
     # source dimensions if we can avoid it.
     source_width = lambda t: quack(t, ['width'], ['photo', 'image'])
     source_height = lambda t: quack(t, ['height'], ['photo', 'image'])
-    exit = lambda u, w, h: dict(src=urljoin(settings.MEDIA_URL, u), width=str(w or ''), height=str(h or ''))
+    exit = lambda u, w, h, **_kw: dict(src=urljoin(settings.MEDIA_URL, u), width=str(w or ''), height=str(h or ''), **_kw)
 
     # compute url and img_object
     url, img_object = _get_url_img_obj_from_thing(thing)
@@ -120,6 +120,10 @@ def compute_img(thing, action, geometry):
     parsed = urlparse(url)
     if parsed.scheme or parsed.netloc:
         return dict(src=url,  width=str(source_width(img_object) or ''), height=str(source_height(img_object) or ''))
+
+    # If this is a responsive image, we only need to provide a placeholder for the moment
+    if geometry == 'responsive':
+        return exit(get_placeholder_url(thing), None, None, responsive=True)
 
     # extract/ensure width & height
     # It's okay to end up with '' for one of the dimensions in the case of thumbnail
@@ -186,7 +190,8 @@ def get_placeholder_url(thing):
     if parsed.scheme or parsed.netloc:
         return url
 
-    return LT_IMG_URL_FORMAT % ('{{ action }}', '{{ dimensions }}', url)
+    #return "http://placehold.it/{{ width }}x{{ height }}"
+    return LT_IMG_URL_FORMAT % ('{{ action }}', '{{ width }}x{{ height }}', url)
 
 
 def get_img_attrs(thing, action, width='', height=''):
@@ -219,6 +224,11 @@ def get_format(file_path):
 
 def get_attr_string(img):
     """ given an image attr dict like that returned by compute_img or get_img_attrs get the string of height width attrs for an img tag """
+    if img.pop('responsive', False):
+        img.setdefault('class', '')
+        img['class'] += ' lt-responsive-img'
+        img['data-urltemplate'] = img['src']
+        img['src'] = "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
     attrs = ['%s="%s"' % attr for attr in img.items() if attr[1]]
     return " ".join(attrs)
 
