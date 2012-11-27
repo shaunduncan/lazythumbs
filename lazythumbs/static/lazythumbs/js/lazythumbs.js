@@ -32,9 +32,12 @@ var lazythumbs = {
 
             if (needs_loaded) {
                 url_template = img.dataset['urltemplate'];
-                url_template = url_template.replace('{{ action }}', 'resize');
-                url_template = url_template.replace('{{ width }}', width);
-                url_template = url_template.replace('{{ height }}', height);
+                url_template = url_template.replace('{{ action }}', img.dataset['action']);
+                if (img.dataset['action'] === 'thumbnail') {
+                    url_template = url_template.replace('{{ size }}', width);
+                } else {
+                    url_template = url_template.replace('{{ size }}', width + 'x' + height);
+                }
 
                 console.log("load", url_template);
 

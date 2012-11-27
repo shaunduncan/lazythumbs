@@ -107,7 +107,14 @@ def compute_img(thing, action, geometry):
     # source dimensions if we can avoid it.
     source_width = lambda t: quack(t, ['width'], ['photo', 'image'])
     source_height = lambda t: quack(t, ['height'], ['photo', 'image'])
-    exit = lambda u, w, h, **_kw: dict(src=urljoin(settings.MEDIA_URL, u), width=str(w or ''), height=str(h or ''), **_kw)
+    def exit(u, w, h, **_kw):
+        attrs = dict(
+            src=urljoin(settings.MEDIA_URL, u),
+            width=str(w or ''),
+            height=str(h or ''),
+            **_kw)
+        attrs['data-action'] = action
+        return attrs
 
     # compute url and img_object
     url, img_object = _get_url_img_obj_from_thing(thing)
@@ -190,8 +197,7 @@ def get_placeholder_url(thing):
     if parsed.scheme or parsed.netloc:
         return url
 
-    #return "http://placehold.it/{{ width }}x{{ height }}"
-    return LT_IMG_URL_FORMAT % ('{{ action }}', '{{ width }}x{{ height }}', url)
+    return LT_IMG_URL_FORMAT % ('{{ action }}', '{{ size }}', url)
 
 
 def get_img_attrs(thing, action, width='', height=''):
