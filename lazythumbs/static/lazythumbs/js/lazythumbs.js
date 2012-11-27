@@ -34,9 +34,9 @@ var lazythumbs = {
                 url_template = img.dataset['urltemplate'];
                 url_template = url_template.replace('{{ action }}', img.dataset['action']);
                 if (img.dataset['action'] === 'thumbnail') {
-                    url_template = url_template.replace('{{ size }}', width);
+                    url_template = url_template.replace('{{ dimensions }}', width);
                 } else {
-                    url_template = url_template.replace('{{ size }}', width + 'x' + height);
+                    url_template = url_template.replace('{{ dimensions }}', width + 'x' + height);
                 }
 
                 console.log("load", url_template);

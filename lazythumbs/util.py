@@ -11,6 +11,8 @@ from django.conf import settings
 logger = logging.getLogger()
 
 LT_IMG_URL_FORMAT = getattr(settings, 'LAZYTHUMBS_URL', '/') + 'lt_cache/%s/%s/%s'
+# This is a 1x1 transparent GIF
+LT_PLACEHOLDER_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
 
 
 def geometry_parse(action, geometry, exc):
@@ -107,14 +109,7 @@ def compute_img(thing, action, geometry):
     # source dimensions if we can avoid it.
     source_width = lambda t: quack(t, ['width'], ['photo', 'image'])
     source_height = lambda t: quack(t, ['height'], ['photo', 'image'])
-    def exit(u, w, h, **_kw):
-        attrs = dict(
-            src=urljoin(settings.MEDIA_URL, u),
-            width=str(w or ''),
-            height=str(h or ''),
-            **_kw)
-        attrs['data-action'] = action
-        return attrs
+    exit = lambda u, w, h, **_attrs: dict(src=urljoin(settings.MEDIA_URL, u), width=str(w or ''), height=str(h or ''), **_attrs)
 
     # compute url and img_object
     url, img_object = _get_url_img_obj_from_thing(thing)
@@ -130,7 +125,12 @@ def compute_img(thing, action, geometry):
 
     # If this is a responsive image, we only need to provide a placeholder for the moment
     if geometry == 'responsive':
-        return exit(get_placeholder_url(thing), source_width(thing), source_height(thing), responsive=True)
+        attrs = {
+            'class': 'lt-responsive-img',
+            'data-urltemplate': get_placeholder_url(thing),
+            'data-action': action,
+        }
+        return exit(LT_PLACEHOLDER_SRC, source_width(thing), source_height(thing), **attrs)
 
     # extract/ensure width & height
     # It's okay to end up with '' for one of the dimensions in the case of thumbnail
@@ -197,7 +197,7 @@ def get_placeholder_url(thing):
     if parsed.scheme or parsed.netloc:
         return url
 
-    return LT_IMG_URL_FORMAT % ('{{ action }}', '{{ size }}', url)
+    return LT_IMG_URL_FORMAT % ('{{ action }}', '{{ dimensions }}', url)
 
 
 def get_img_attrs(thing, action, width='', height=''):
@@ -230,12 +230,6 @@ def get_format(file_path):
 
 def get_attr_string(img):
     """ given an image attr dict like that returned by compute_img or get_img_attrs get the string of height width attrs for an img tag """
-    if img.pop('responsive', False):
-        img.setdefault('class', '')
-        img['class'] += ' lt-responsive-img'
-        img['data-urltemplate'] = img['src']
-        # This is a 1x1 transparent GIF
-        img['src'] = "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
     attrs = ['%s="%s"' % attr for attr in img.items() if attr[1]]
     return " ".join(attrs)
 
