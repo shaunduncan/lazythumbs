@@ -23,13 +23,21 @@
 
         {% load lazythumb %}
         {% lazythumb img_file scale '80x80' as img %}
-            <img src="{{img.src}}" width="{{img.width}}" height="{{img.height}}" alt="{{img_file.name}}" />
+            <img {% img_attrs img %} alt="{{img_file.name}}" />
         {% endlazythumb %}
         {% lazythumb img_file resize '80x60' as img %}
-            <img src="{{img.src}}" width="{{img.width}}" height="{{img.height}}" alt="{{img_file.name}}" />
+            <img {% img_attrs img %} alt="{{img_file.name}}" />
         {% endlazythumb %}
         {% lazythumb img_file thumbnail '80' as img %}
-            <img src="{{img.src}}" width="{{img.width}}" height="{{img.height}}" alt="{{img_file.name}}" />
+            <img {% img_attrs img %} alt="{{img_file.name}}" />
+        {% endlazythumb %}
+
+* delay the size until the layout is known, for responsive designs
+
+        <script type="text/javascript" src="{{ STATIC_URL }}lib/lazythumbs/js/lazythumbs.js"></script>
+
+        {% lazythumb img_file thumbnail 'responsive' as img %}
+            <img {% img_attrs img %} alt="{{img_file.name}}" />
         {% endlazythumb %}
 
 ## summary
