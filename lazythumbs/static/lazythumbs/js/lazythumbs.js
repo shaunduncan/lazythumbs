@@ -7,12 +7,14 @@ var lazythumbs = {
     function update_responsive_images(e) {
 
         var responsive_images = document.getElementsByClassName('lt-responsive-img');
-        var img, i, width, height, needs_loaded, url_template;
+        var img, i, width, height, needs_loaded, url_template, old_ratio, new_ratio, wdelta, hdelta;
 
         for (i=0; i < responsive_images.length; i++) {
             img = responsive_images[i];
             width = img.clientWidth;
             height = img.clientHeight;
+            old_ratio = img.dataset['ltwidth'] / img.dataset['ltheight'];
+            new_ratio = width / height;
 
             // We want to load the image if this is the page load event
             // or if the image has increased in size.
@@ -23,9 +25,16 @@ var lazythumbs = {
             } else {
                 width = Math.min(width, img.dataset['ltmaxwidth']);
                 height = Math.min(height, img.dataset['ltmaxheight']);
-                var wdelta = width - img.dataset['ltwidth'];
-                var hdelta = height - img.dataset['ltheight'];
+                wdelta = width - img.dataset['ltwidth'];
+                hdelta = height - img.dataset['ltheight'];
+
+                // Load new images when increasing by a large enough delta
                 if (wdelta > lazythumbs.FETCH_STEP_MIN || hdelta > lazythumbs.FETCH_STEP_MIN) {
+                    needs_loaded = true;
+                }
+
+                // Load new images when changing ratio
+                if (old_ratio != new_ratio && img.dataset['action'] != 'resize') {
                     needs_loaded = true;
                 }
             }
@@ -38,8 +47,6 @@ var lazythumbs = {
                 } else {
                     url_template = url_template.replace('{{ dimensions }}', width + '/' + height);
                 }
-
-                console.log("load", url_template);
 
                 (function(existing_img) {
                     var new_image = new Image();
