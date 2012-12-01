@@ -7,7 +7,7 @@ var lazythumbs = {
     function update_responsive_images(e) {
 
         var responsive_images = document.getElementsByClassName('lt-responsive-img');
-        var img, i, width, height, needs_loaded, url_template, old_ratio, new_ratio, wdelta, hdelta;
+        var img, i, width, height, needs_loaded, url_template, old_ratio, new_ratio, wdelta, hdelta, roundedsize;
 
         for (i=0; i < responsive_images.length; i++) {
             img = responsive_images[i];
@@ -22,7 +22,13 @@ var lazythumbs = {
                 needs_loaded = true;
                 img.dataset['ltmaxwidth'] = img.getAttribute('width');
                 img.dataset['ltmaxheight'] = img.getAttribute('height');
-            } else {
+            }
+
+            roundedsize = round_size_up({width: width, height: height}, {width: img.dataset.ltmaxwidth, height: img.dataset.ltmaxheight});
+            width = roundedsize.width;
+            height = roundedsize.height;
+
+            if (e.type !== 'load') {
                 width = Math.min(width, img.dataset['ltmaxwidth']);
                 height = Math.min(height, img.dataset['ltmaxheight']);
                 wdelta = width - img.dataset['ltwidth'];
@@ -34,7 +40,7 @@ var lazythumbs = {
                 }
 
                 // Load new images when changing ratio
-                if (old_ratio != new_ratio && img.dataset['action'] != 'resize') {
+                if (Math.abs(old_ratio - new_ratio) > 0.1 && img.dataset['action'] != 'resize') {
                     needs_loaded = true;
                 }
             }
@@ -67,5 +73,36 @@ var lazythumbs = {
         this.removeEventListener('load', arguments.callee);
         return update_responsive_images.apply(this, arguments);
     }
+
+    function scale_size(size, scale) {
+        return {
+            width: parseInt(size.width / scale),
+            height: parseInt(size.height / scale)
+        }
+    }
+
+    function scale_from_step(size, step) {
+        var d = Math.min(size.width, size.height);
+        return (d + step) / d;
+    }
+
+    function round_size_up(size, maxsize) {
+        var candidate = {width: maxsize.width, height: maxsize.height};
+        var scale = scale_from_step(maxsize, lazythumbs.FETCH_STEP_MIN);
+        var current = scale_size(candidate, scale);
+
+        while (current.width >= size.width && current.height >= size.height) {
+            // The one we're looking at is still larger, so step down
+            candidate = current;
+            current = scale_size(current, scale);
+        }
+
+        // Current is now too small, candidate is the next largest size.
+        return candidate;
+    }
+
+    lazythumbs.scale_size = scale_size;
+    lazythumbs.scale_from_step = scale_from_step;
+    lazythumbs.round_size_up = round_size_up;
 
 })(lazythumbs);
