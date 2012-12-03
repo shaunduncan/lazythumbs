@@ -72,33 +72,3 @@ class ImgAttrsNode(Node):
 
     def render(self, context):
         return get_attr_string(self.img_var.resolve(context))
-
-
-register.tag('lt_clientside', lambda p, t: ClientSideNode(p, t))
-class ClientSideNode(Node):
-    """
-    Used in script tag to output an object literal containing the lt_cache img src
-    with placeholders for lazythumb action (resize|thumbnail) and dimensions.
-    Invoke like so: var img = {% lt_clientside photo_obj %};
-    Outputs: var img = {
-        "width": 400,
-        "height": 300,
-        "src": "/media/lt/lt_cache/{action}/{dimensions}/path/to/img.jpg"
-    };
-    """
-    usage = 'Expected invocation is {% lt_clientside url|ImageFile|Object %}'
-
-    def __init__(self, parser, token):
-        tse = lambda m: TemplateSyntaxError('lt_clientside: %s' % m)
-        bits = token.contents.split()
-        try:
-            _, thing = bits
-        except ValueError:
-            raise tse(self.usage)
-        self.thing = Variable(thing)
-
-    def render(self, context):
-        thing = self.thing.resolve(context)
-        img_data = get_source_img_attrs(thing)
-        img_data['src'] = get_placeholder_url(thing)
-        return json.dumps(img_data)
