@@ -19,6 +19,8 @@ from lazythumbs.util import geometry_parse, get_format
 
 logger = logging.getLogger('lazythumbs')
 
+MATTE_BACKGROUND_COLOR = getattr(settings, 'LAZYTHUMBS_MATTE_BACKGROUND_COLOR', (238, 238, 238))
+
 def action(fun):
     """
     Decorator used to denote an instance method as an action: a function
@@ -185,6 +187,49 @@ class LazyThumbRenderer(View):
         bottom = top + height
 
         return img.crop((left, top, right, bottom))
+
+    @action
+    def matte(self, width, height, img_path=None, img=None):
+        """
+        Scale the image to fit in the given size, surrounded by a matte
+        to fill in any extra space.
+
+        :param width: desired width in pixels. required.
+        :param height: desired height in pixels. required.
+        :param img_path: a path to an image on the filesystem
+        :param img: a PIL Image object
+        :returns: a PIL Image object
+        """
+        img = img or self.get_pil_from_path(img_path)
+        if not img:
+            raise ValueError('unable to find img given args')
+
+        source_width = img.size[0]
+        source_height = img.size[1]
+
+        source_ratio = float(source_width) / source_height
+        new_ratio = float(width) / height
+
+        if source_ratio == new_ratio:
+            return self.resize(width, height, img_path, img)
+        elif new_ratio < source_ratio:
+            # pad Y
+            x = 0
+            shrunk_width = width
+            shrunk_height = (width * height) / float(source_width)
+            y = (height - shrunk_height) / 2
+        else:
+            # pad X
+            y = 0
+            shrunk_width = (width * width) / float(source_width)
+            shrunk_height = height
+            x = (width - shrunk_width) / 2
+
+        new_img = Image.new('RGB', (width, height), MATTE_BACKGROUND_COLOR)
+        shrunk = img.resize((shrunk_width, shrunk_height))
+        new_img.paste(shrunk, (x, y))
+
+        return new_img
 
     @action
     def thumbnail(self, width=None, height=None, img_path=None, img=None):
