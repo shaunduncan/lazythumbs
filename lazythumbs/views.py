@@ -204,30 +204,10 @@ class LazyThumbRenderer(View):
         if not img:
             raise ValueError('unable to find img given args')
 
-        source_width = img.size[0]
-        source_height = img.size[1]
-
-        source_ratio = float(source_width) / source_height
-        new_ratio = float(width) / height
-
-        if source_ratio == new_ratio:
-            return self.resize(width, height, img_path, img)
-        elif new_ratio < source_ratio:
-            # pad Y
-            x = 0
-            shrunk_width = width
-            shrunk_height = (width * height) / float(source_width)
-            y = (height - shrunk_height) / 2
-        else:
-            # pad X
-            y = 0
-            shrunk_width = (width * width) / float(source_width)
-            shrunk_height = height
-            x = (width - shrunk_width) / 2
-
         new_img = Image.new('RGB', (width, height), MATTE_BACKGROUND_COLOR)
-        shrunk = img.resize((shrunk_width, shrunk_height))
-        new_img.paste(shrunk, (x, y))
+        img.thumbnail((width, height), Image.ANTIALIAS)
+        pos = ((width - img.size[0]) / 2, (height - img.size[1]) / 2)
+        new_img.paste(img, pos)
 
         return new_img
 
