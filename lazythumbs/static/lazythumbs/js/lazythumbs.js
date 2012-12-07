@@ -86,10 +86,29 @@ var lazythumbs = {
         return (d + step) / d;
     }
 
-    function round_size_up(size, maxsize) {
-        var candidate = {width: maxsize.width, height: maxsize.height};
-        var scale = scale_from_step(maxsize, lazythumbs.FETCH_STEP_MIN);
-        var current = scale_size(candidate, scale);
+    /* round_size_up(size, origsize)
+     *
+     * size     {width, height} of the requested image size
+     * origsize  {width, height} or the original image size
+     *
+     * Produces a {width, height} result that is at least `size`, and
+     * rounded up by the step value so that multiple requests for similar
+     * sizes can request the same, cached size.
+     */
+    function round_size_up(size, origsize) {
+        var ratio = size.width / size.height;
+        
+        // The largest size we would allow, in the ratio requested
+        var candidate = {
+            width: size.width<size.height ?
+                origsize.width : 
+                origsize.height * ratio
+        ,   height: size.height<size.width ?
+                origsize.height : 
+                origsize.width / ratio
+        };
+        var scale = scale_from_step(origsize, lazythumbs.FETCH_STEP_MIN);
+        var current = candidate;
 
         while (current.width >= size.width && current.height >= size.height) {
             // The one we're looking at is still larger, so step down
