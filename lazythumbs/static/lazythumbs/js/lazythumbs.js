@@ -97,14 +97,14 @@ var lazythumbs = {
      */
     function round_size_up(size, origsize) {
         var ratio = size.width / size.height;
-        
+
         // The largest size we would allow, in the ratio requested
         var candidate = {
             width: size.width<size.height ?
-                origsize.width : 
+                origsize.width :
                 origsize.height * ratio
         ,   height: size.height<size.width ?
-                origsize.height : 
+                origsize.height :
                 origsize.width / ratio
         };
         var scale = scale_from_step(origsize, lazythumbs.FETCH_STEP_MIN);
