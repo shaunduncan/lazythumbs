@@ -16,9 +16,14 @@ var lazythumbs = {
             old_ratio = img.dataset['ltwidth'] / img.dataset['ltheight'];
             new_ratio = width / height;
 
+            if (width===0 || height===0) {
+                // The image is currently hidden
+                continue;
+            }
+
             // We want to load the image if this is the page load event
             // or if the image has increased in size.
-            if (e.type === 'load') {
+            if (typeof img.dataset['ltmaxwidth'] === 'undefined') {
                 needs_loaded = true;
                 img.dataset['ltmaxwidth'] = img.getAttribute('width');
                 img.dataset['ltmaxheight'] = img.getAttribute('height');
