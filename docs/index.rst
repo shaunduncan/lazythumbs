@@ -31,10 +31,10 @@ Usage
 
 * add `lazythumbs` to INSTALLED_APPS
 * configure:
- * **LAZYTHUMBS_404_CACHE_TIMEOUT** how long before a 404'd thumbnail request is retried
- * **LAZYTHUMBS_CACHE_TIMEOUT** how long before a thumbnail gets regenerated
- * **LAZYTHUMBS_DUMMY** whether or not the lazythumb template tag just uses placekitten
- * **LAZYTHUMBS_URL** url prefix for lazythumb requests. used by template tag. (usually MEDIA\_URL or '')
+ * **LAZYTHUMBS_404_CACHE_TIMEOUT** how long before a 404'd thumbnail request is retried (required)
+ * **LAZYTHUMBS_CACHE_TIMEOUT** how long a lazythumb image remains cached by browsers (required)
+ * **LAZYTHUMBS_DUMMY** whether or not the lazythumb template tag just uses placekitten. (default: `False`)
+ * **LAZYTHUMBS_URL** url prefix for lazythumb requests. used by template tag. usually MEDIA_URL or ''. (default: `/`)
 
 * add to urls.py
 
@@ -46,7 +46,7 @@ Usage
 
 .. code-block:: text
 
-    mysite.com/lt/lt_cache/thumbnail/20x20/kitten.jpg/
+    mysite.com/lt/lt_cache/thumbnail/20/20/kitten.jpg/
 
 * use in a template
 
