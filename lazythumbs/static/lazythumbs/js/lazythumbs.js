@@ -3,7 +3,31 @@ var lazythumbs = {
 };
 (function(lazythumbs){
 
-    window.addEventListener("resize", update_responsive_images, false);
+    function bind_event(eventname, callback) {
+        if (window.addEventListener) {
+            window.addEventListener(eventname, callback, false);
+        } else {
+            window.attachEvent('on' + eventname, callback);
+        }
+    }
+
+    function data(el, name, value) {
+        if (!!el.dataset) {
+            if (typeof value !== 'undefined') {
+                el.dataset[name] = value;
+            } else {
+                return el.dataset[name]
+            }
+        } else {
+            if (typeof value !== 'undefined') {
+                el.setAttribute('data-' + name, value);
+            } else {
+                return el.getAttribute('data-' + name);
+            }
+        }
+    }
+    
+    bind_event("resize", update_responsive_images);
     function update_responsive_images(e) {
 
         var responsive_images = document.getElementsByClassName('lt-responsive-img');
@@ -13,7 +37,7 @@ var lazythumbs = {
             img = responsive_images[i];
             width = img.clientWidth;
             height = img.clientHeight;
-            old_ratio = img.dataset['ltwidth'] / img.dataset['ltheight'];
+            old_ratio = data(img, 'ltwidth') / data(img, 'ltheight');
             new_ratio = width / height;
 
             if (width===0 || height===0) {
@@ -23,21 +47,21 @@ var lazythumbs = {
 
             // We want to load the image if this is the page load event
             // or if the image has increased in size.
-            if (typeof img.dataset['ltmaxwidth'] === 'undefined') {
+            if (!data(img, 'ltmaxwidth')) {
                 needs_loaded = true;
-                img.dataset['ltmaxwidth'] = img.getAttribute('width');
-                img.dataset['ltmaxheight'] = img.getAttribute('height');
+                data(img, 'ltmaxwidth', img.getAttribute('width'));
+                data(img, 'ltmaxheight', img.getAttribute('height'));
             }
 
-            roundedsize = round_size_up({width: width, height: height}, {width: img.dataset.ltmaxwidth, height: img.dataset.ltmaxheight});
+            roundedsize = round_size_up({width: width, height: height}, {width: data(img, 'ltmaxwidth'), height: data(img, 'ltmaxheight')});
             width = roundedsize.width;
             height = roundedsize.height;
 
             if (e.type !== 'load') {
-                width = Math.min(width, img.dataset['ltmaxwidth']);
-                height = Math.min(height, img.dataset['ltmaxheight']);
-                wdelta = width - img.dataset['ltwidth'];
-                hdelta = height - img.dataset['ltheight'];
+                width = Math.min(width, data(img, 'ltmaxwidth'));
+                height = Math.min(height, data(img, 'ltmaxheight'));
+                wdelta = width - data(img, 'ltwidth');
+                hdelta = height - data(img, 'ltheight');
 
                 // Load new images when increasing by a large enough delta
                 if (wdelta > lazythumbs.FETCH_STEP_MIN || hdelta > lazythumbs.FETCH_STEP_MIN) {
@@ -45,15 +69,15 @@ var lazythumbs = {
                 }
 
                 // Load new images when changing ratio
-                if (Math.abs(old_ratio - new_ratio) > 0.1 && img.dataset['action'] != 'resize') {
+                if (Math.abs(old_ratio - new_ratio) > 0.1 && data(img, 'action') != 'resize') {
                     needs_loaded = true;
                 }
             }
 
             if (needs_loaded) {
-                url_template = img.dataset['urltemplate'];
-                url_template = url_template.replace('{{ action }}', img.dataset['action']);
-                if (img.dataset['action'] === 'thumbnail') {
+                url_template = data(img, 'urltemplate');
+                url_template = url_template.replace('{{ action }}', data(img, 'action'));
+                if (data(img, 'action') === 'thumbnail') {
                     url_template = url_template.replace('{{ dimensions }}', width);
                 } else {
                     url_template = url_template.replace('{{ dimensions }}', width + '/' + height);
@@ -67,13 +91,13 @@ var lazythumbs = {
                     }
                 })(img);
 
-                img.dataset['ltwidth'] = width;
-                img.dataset['ltheight'] = height;
+                data(img, 'ltwidth', width);
+                data(img, 'ltheight', height);
             }
         }
     };
 
-    window.addEventListener('load', setup_responsive_images, false);
+    bind_event('load', setup_responsive_images, false);
     function setup_responsive_images() {
         this.removeEventListener('load', arguments.callee);
         return update_responsive_images.apply(this, arguments);
