@@ -19,20 +19,21 @@ Summary
 Lazythumbs acts as a PIL proxy for images stored in
 MEDIA_ROOT. It looks for the requested image and, if found,
 generates a new image and writes it to the filesystem at MEDIA_ROOT/lt_cache.
-If the request resulted in a 404 this is recorded in cache to avoid getting
+If the request resulted in a 404, the 404 response is cached to avoid getting
 hammered by repeated requests for images that don't exist.
 
 Lazythumbs can be utilized from within a Django project's templates, or
 from without through the image request API. Images are produced and cached
 from their sources on-demand.
 
-Usage
+Setup
 #####
 
 * add `lazythumbs` to INSTALLED_APPS
-* configure:
- * **LAZYTHUMBS_404_CACHE_TIMEOUT** how long before a 404'd thumbnail request is retried (required)
- * **LAZYTHUMBS_CACHE_TIMEOUT** how long a lazythumb image remains cached by browsers (required)
+
+* configure with Django settings:
+ * **LAZYTHUMBS_404_CACHE_TIMEOUT** seconds before a 404'd thumbnail request is retried (required)
+ * **LAZYTHUMBS_CACHE_TIMEOUT** seconds a lazythumb image remains cached by browsers (required)
  * **LAZYTHUMBS_DUMMY** whether or not the lazythumb template tag just uses placekitten. (default: `False`)
  * **LAZYTHUMBS_URL** url prefix for lazythumb requests. used by template tag. usually MEDIA_URL or ''. (default: `/`)
 
@@ -41,6 +42,9 @@ Usage
 .. code-block:: python
 
     (r'^lt/', include('lazythumbs.urls'))
+
+Usage
+#####
 
 * ask for a tiny kitten
 
