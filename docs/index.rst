@@ -32,6 +32,7 @@ Setup
 * add `lazythumbs` to INSTALLED_APPS
 
 * configure with Django settings:
+
  * **LAZYTHUMBS_404_CACHE_TIMEOUT** seconds before a 404'd thumbnail request is retried (required)
  * **LAZYTHUMBS_CACHE_TIMEOUT** seconds a lazythumb image remains cached by browsers (required)
  * **LAZYTHUMBS_DUMMY** whether or not the lazythumb template tag just uses placekitten. (default: `False`)
