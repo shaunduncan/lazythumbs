@@ -19,7 +19,7 @@ from lazythumbs.util import geometry_parse, get_format
 
 logger = logging.getLogger('lazythumbs')
 
-MATTE_BACKGROUND_COLOR = getattr(settings, 'LAZYTHUMBS_MATTE_BACKGROUND_COLOR', (238, 238, 238))
+MATTE_BACKGROUND_COLOR = getattr(settings, 'LAZYTHUMBS_MATTE_BACKGROUND_COLOR', (0, 0, 0))
 
 def action(fun):
     """
