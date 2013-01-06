@@ -19,8 +19,6 @@ from lazythumbs.util import geometry_parse, get_format
 
 logger = logging.getLogger('lazythumbs')
 
-MATTE_BACKGROUND_COLOR = getattr(settings, 'LAZYTHUMBS_MATTE_BACKGROUND_COLOR', (238, 238, 238))
-
 def action(fun):
     """
     Decorator used to denote an instance method as an action: a function
@@ -187,29 +185,6 @@ class LazyThumbRenderer(View):
         bottom = top + height
 
         return img.crop((left, top, right, bottom))
-
-    @action
-    def matte(self, width, height, img_path=None, img=None):
-        """
-        Scale the image to fit in the given size, surrounded by a matte
-        to fill in any extra space.
-
-        :param width: desired width in pixels. required.
-        :param height: desired height in pixels. required.
-        :param img_path: a path to an image on the filesystem
-        :param img: a PIL Image object
-        :returns: a PIL Image object
-        """
-        img = img or self.get_pil_from_path(img_path)
-        if not img:
-            raise ValueError('unable to find img given args')
-
-        new_img = Image.new('RGB', (width, height), MATTE_BACKGROUND_COLOR)
-        img.thumbnail((width, height), Image.ANTIALIAS)
-        pos = ((width - img.size[0]) / 2, (height - img.size[1]) / 2)
-        new_img.paste(img, pos)
-
-        return new_img
 
     @action
     def thumbnail(self, width=None, height=None, img_path=None, img=None):
