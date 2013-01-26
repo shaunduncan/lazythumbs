@@ -27,10 +27,9 @@ var lazythumbs = {
         }
     }
     
-    bind_event("resize", update_responsive_images);
     function update_responsive_images(e) {
 
-        var responsive_images = document.getElementsByClassName('lt-responsive-img');
+        var responsive_images = document.querySelectorAll('.lt-responsive-img');
         var img, i, width, height, needs_loaded, url_template, old_ratio, new_ratio, wdelta, hdelta, roundedsize;
 
         for (i=0; i < responsive_images.length; i++) {
@@ -99,8 +98,15 @@ var lazythumbs = {
 
     bind_event('load', setup_responsive_images, false);
     function setup_responsive_images() {
-        this.removeEventListener('load', arguments.callee);
-        return update_responsive_images.apply(this, arguments);
+        if (this.removeEventListener) {
+            this.removeEventListener('load', arguments.callee);
+        } else if (this.detachEvent) {
+            this.detachEvent('onload', arguments.callee);
+        }
+
+        var r = update_responsive_images.apply(this, arguments);
+        bind_event("resize", update_responsive_images);
+        return r;
     }
 
     function scale_size(size, scale) {
