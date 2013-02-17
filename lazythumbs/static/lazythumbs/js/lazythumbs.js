@@ -84,10 +84,10 @@ var lazythumbs = {
 
                 (function(existing_img) {
                     var new_image = new Image();
-                    new_image.src = url_template;
                     new_image.onload = function() {
-                        existing_img.src = new_image.src;  
+                        existing_img.src = new_image.src;
                     }
+                    new_image.src = url_template;
                 })(img);
 
                 data(img, 'ltwidth', width);
@@ -137,10 +137,10 @@ var lazythumbs = {
         var candidate = {
             width: size.width<size.height ?
                 origsize.width :
-                origsize.height * ratio
+                parseInt(origsize.height * ratio)
         ,   height: size.height<size.width ?
                 origsize.height :
-                origsize.width / ratio
+                parseInt(origsize.width / ratio)
         };
         var scale = scale_from_step(origsize, lazythumbs.FETCH_STEP_MIN);
         var current = candidate;
