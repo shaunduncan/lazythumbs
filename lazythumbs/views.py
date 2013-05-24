@@ -280,7 +280,14 @@ class LazyThumbRenderer(View):
         :raises IOError: if image is not found
         :return: PIL.Image
         """
-        return Image.open(os.path.join(settings.MEDIA_ROOT, img_path))
+        static_url = settings.STATIC_URL.lstrip('/')
+
+        if img_path.lstrip('/').startswith(static_url):
+            path = os.path.join(settings.STATIC_ROOT, img_path.replace(static_url, ''))
+        else:
+            path = os.path.join(settings.MEDIA_ROOT, img_path)
+
+        return Image.open(path)
 
     def cache_key(self, img_path, action, width, height):
         """
