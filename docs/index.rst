@@ -145,10 +145,10 @@ Responsive Images
 Lazythumbs includes a useful facility for anyone using responsive layouts to adapt between
 a range of display sizes. In these situations, loading images larger than you'll actually be
 able to display (for example, on mobile devices) is often unwanted or even damaging in cases of
-limited and high-latency network. Lazythumbs can optimize the image loading for you.
+a limited and high-latency network. Lazythumbs can optimize the image loading for you.
 
-To use this feature, be sure to load the lazythumbs.js script to support the client-side behavior
-and when including your images in templates, use the special size 'responsive' to trigger the
+To use this feature, be sure to load the lazythumbs.js script to support the client-side behavior.
+When including your images in templates, use the special size 'responsive' to trigger the
 injection of a placeholder for the clientside script to use, like so:
 
 .. code-block:: html
@@ -172,7 +172,7 @@ have come in handy in our experience.
 Static Sizes
 ''''''''''''
 
-At some breakpoints, it make the most sense to specify static dimensions with conrete values to width
+At some breakpoints, it makes the most sense to specify static dimensions with concrete values to width
 and height.
 
 .. code-block:: css
@@ -192,7 +192,7 @@ want to adapt the size to the space available in a display, rather than snapping
 points.
 
 This is really difficult to do, as there is no direct way to specify it in CSS, but there is a trick we
-recommend to acheive a ratio enforcement. In this example, we'll specify a width and the percentage of
+recommend to achieve a ratio enforcement. In this example, we'll specify a width and the percentage of
 that width to enforce the height to keep at. We'll fill the available width in whatever container the
 image appears, and adjust the height to maintain a 4:3 ratio.
 
