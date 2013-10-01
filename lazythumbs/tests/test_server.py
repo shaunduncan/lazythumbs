@@ -1,3 +1,4 @@
+import errno
 import os
 import shutil
 import tempfile
@@ -191,6 +192,21 @@ class GetViewTest(TestCase):
         cached = mc.cache[key]
         self.assertEqual(cached, False)
 
+    def test_no_img_should_404(self):
+        """
+        Test that when save fails with EEXIST error, 404 is returned.
+        Maybe instead of 404'ing we should make another attempt to read?
+        """
+        req = Mock()
+        req.path = "/lt_cache/thumbnail/48/i/p.jpg"
+        self.renderer.fs.save = Mock()
+        err = OSError()
+        err.errno = errno.EEXIST
+        self.renderer.fs.save.side_effect = err
+        with patch('lazythumbs.views.Image', self.mock_Image):
+            with patch('lazythumbs.views.cache', MockCache()) as mc:
+                resp = self.renderer.get(req, 'thumbnail', '48', 'i/p')
+        self.assertEqual(resp.status_code, 404)
 
 class TestOddFiles(TestCase):
 
