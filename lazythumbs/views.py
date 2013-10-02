@@ -131,11 +131,17 @@ class LazyThumbRenderer(View):
                 buf.close()
                 try:
                     self.fs.save(rendered_path, ContentFile(raw_data))
-                except OSError, e:
+                except OSError as e:
                     if e.errno == errno.EEXIST:
-                        pass # race condition, another WSGI worker wrote file or directory first
+                        # possible race condition, another WSGI worker wrote file or directory first
+                        # try to read again
+                        try:
+                            raw_data = self.fs.open(rendered_path).read()
+                        except IOError as e:
+                            logger.exception("Unable to read image file, returning 404: %s" % e)
+                            return self.four_oh_four()
                     else:
-                        logger.exception("saving converted image")
+                        logger.exception("Saving converted image: %s" % e)
                         raise
 
             except (IOError, SuspiciousOperation, ValueError), e:
