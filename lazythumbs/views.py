@@ -137,7 +137,7 @@ class LazyThumbRenderer(View):
                         # try to read again
                         try:
                             raw_data = self.fs.open(rendered_path).read()
-                        except IOError as e:
+                        except Exception as e:
                             logger.exception("Unable to read image file, returning 404: %s" % e)
                             return self.four_oh_four()
                     else:
