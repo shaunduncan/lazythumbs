@@ -204,7 +204,7 @@ class GetViewTest(TestCase):
         err.errno = errno.EEXIST
         self.renderer.fs.save.side_effect = err
         with patch('lazythumbs.views.Image', self.mock_Image):
-            with patch('lazythumbs.views.cache', MockCache()) as mc:
+            with patch('lazythumbs.views.cache', MockCache()):
                 resp = self.renderer.get(req, 'thumbnail', '48', 'i/p')
         self.assertEqual(resp.status_code, 404)
 
