@@ -194,8 +194,8 @@ class GetViewTest(TestCase):
 
     def test_no_img_should_404(self):
         """
-        Test that when save fails with EEXIST error, 404 is returned.
-        Maybe instead of 404'ing we should make another attempt to read?
+        When save fails with EEXIST error, it will try to read the file again
+        But if it still can't be read, make sure it returns a 404 instead of 0-byte image.
         """
         req = Mock()
         req.path = "/lt_cache/thumbnail/48/i/p.jpg"
