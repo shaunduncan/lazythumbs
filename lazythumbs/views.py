@@ -42,7 +42,7 @@ class LazyThumbRenderer(View):
     """
     def __init__(self):
         self.fs = FileSystemStorage()
-        self._allowed_actions = [a.__name__
+        self.allowed_actions = [a.__name__
             for a in (getattr(self, a, None) for a in dir(self))
             if type(a) == types.MethodType and getattr(a, 'is_action', False)
         ]
@@ -68,7 +68,7 @@ class LazyThumbRenderer(View):
         if re.match('\.\./', source_path):
             logger.info("%s: blocked bad path" % source_path)
             return self.four_oh_four()
-        if action not in self._allowed_actions:
+        if action not in self.allowed_actions:
             logger.info("%s: bad action requested: %s" % (source_path, action))
             return self.four_oh_four()
 

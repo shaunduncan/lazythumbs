@@ -52,7 +52,7 @@ class RenderTest(TestCase):
                 pass
 
         renderer = MyRenderer()
-        self.assertTrue('myaction' in renderer._allowed_actions)
+        self.assertTrue('myaction' in renderer.allowed_actions)
 
     def test_thumbnail_noop(self):
         """

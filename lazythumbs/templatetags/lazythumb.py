@@ -12,11 +12,10 @@ import json
 
 from django.template import TemplateSyntaxError, Library, Node, Variable
 from lazythumbs.util import compute_img, get_attr_string, get_placeholder_url, get_source_img_attrs
+from lazythumbs.views import LazyThumbRenderer
 
 
-# TODO this should *not* be hardcoded. it completely prevents the proper
-# utilization of the subclassing feature of the renderer. A bug, imo.
-SUPPORTED_ACTIONS = ['thumbnail', 'resize', 'aresize', 'matte']
+SUPPORTED_ACTIONS = LazyThumbRenderer().allowed_actions
 
 register = Library()
 logger = logging.getLogger()
