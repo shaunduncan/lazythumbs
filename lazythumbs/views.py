@@ -243,12 +243,11 @@ class LazyThumbRenderer(View):
         if img.size == (width, height):
             return img
 
-        left = (img.size[0] - width) / 2
-        top = (img.size[1] - height) / 2
-        right = left + width
-        bottom = top + height
-
-        return img.crop((left, top, right, bottom))
+        offset_x = (width - img.size[0]) / 2
+        offset_y = (height - img.size[1]) / 2
+        result = Image.new(mode='RGB', size=(width, height), color=MATTE_BACKGROUND_COLOR)
+        result.paste(img, (offset_x, offset_y))
+        return result
 
     @action
     def matte(self, width, height, img_path=None, img=None):
