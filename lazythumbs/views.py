@@ -195,6 +195,62 @@ class LazyThumbRenderer(View):
         return img.crop((left, top, right, bottom))
 
     @action
+    def aresize(self, width, height, img_path=None, img=None):
+
+        # FIXME: This is largely copied and pasted form resize() above. Refactor to share code.
+
+        img = img or self.get_pil_from_path(img_path)
+        if not img:
+            raise ValueError('unable to find img given args')
+
+        source_width = img.size[0]
+        source_height = img.size[1]
+
+        if width >= source_width and height >= source_height:
+            return img
+
+        source_aspect = float(source_width) / source_height
+        aspect = float(width) / height if width and height else source_aspect
+
+        source_is_landscape = (source_aspect >= 1.0)
+        is_landscape = (aspect >= 1.0)
+
+        if source_is_landscape == is_landscape:
+            # Source and target have the same orientation. Scale according to aspect ratio
+            # to maximize photo area and minimize horizontal/vertical border insertion.
+            if source_aspect > aspect:
+                # Source has wider ratio than target. Scale to height.
+                target_width, target_height = None, height
+            else:
+                # Source has taller ratio than target. Scale to width.
+                target_width, target_height = width, None
+        else:
+            # Source and target have opposite orientations. Scale to source's longer dimension.
+            # This will fill with horiz or vert bars around the image, but it will effectively
+            # maintain the source orientation.
+            if source_is_landscape:
+                target_width, target_height = width, None
+            else:
+                target_width, target_height = None, height
+
+        img = self.thumbnail(
+            width = target_width,
+            height = target_height,
+            img = img
+        )
+
+        # see if we even have to crop
+        if img.size == (width, height):
+            return img
+
+        left = (img.size[0] - width) / 2
+        top = (img.size[1] - height) / 2
+        right = left + width
+        bottom = top + height
+
+        return img.crop((left, top, right, bottom))
+
+    @action
     def matte(self, width, height, img_path=None, img=None):
         """
         Scale the image to fit in the given size, surrounded by a matte

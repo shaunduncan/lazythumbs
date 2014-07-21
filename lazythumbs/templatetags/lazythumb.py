@@ -16,7 +16,7 @@ from lazythumbs.util import compute_img, get_attr_string, get_placeholder_url, g
 
 # TODO this should *not* be hardcoded. it completely prevents the proper
 # utilization of the subclassing feature of the renderer. A bug, imo.
-SUPPORTED_ACTIONS = ['thumbnail', 'resize', 'matte']
+SUPPORTED_ACTIONS = ['thumbnail', 'resize', 'aresize', 'matte']
 
 register = Library()
 logger = logging.getLogger()
