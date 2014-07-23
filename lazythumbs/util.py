@@ -230,7 +230,7 @@ def get_format(file_path):
 
 def get_attr_string(img):
     """ given an image attr dict like that returned by compute_img or get_img_attrs get the string of height width attrs for an img tag """
-    attrs = ['%s="%s"' % attr for attr in img.items() if attr[1]]
+    attrs = ['%s="%s"' % attr for attr in sorted(img.items()) if attr[1]]
     return " ".join(attrs)
 
 
