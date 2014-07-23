@@ -23,9 +23,9 @@ class MockCache(object):
 
 
 class MockImg(object):
-    def __init__(self):
+    def __init__(self, width=1000, height=1000):
         self.called = []
-        self.size = (1000, 1000)
+        self.size = (width, height)
         self.mode = "RGB"
 
     def resize(self, size, _):
@@ -116,6 +116,62 @@ class RenderTest(TestCase):
         self.assertEqual(img.size[0], 1000)
         self.assertEqual(img.size[1], 1000)
         self.assertEqual(len(mock_img.called), 0)
+
+    def test_aresize_width(self):
+        """
+        Ensure landscape aresize action thumbnails to width and center-crops.
+        """
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg(width=1500, height=1000)
+        mock_Image = Mock()
+
+        # aresize 1500x1000 => 750x400 should thumbnail to 750x500 and then
+        # paste into the center of a new image, losing some top/right content.
+        with patch('lazythumbs.views.Image', mock_Image):
+            img = renderer.aresize(width=750, height=400, img=mock_img)
+
+        self.assertEqual(mock_img.called, ['resize'])
+        self.assertEqual(img, mock_Image.new.return_value)
+        self.assertEqual(mock_Image.new.call_args[1]['size'], (750, 400))
+        img.paste.assert_called_once_with(mock_img, (0, -50))
+
+    def test_aresize_height(self):
+        """
+        Ensure landscape aresize action thumbnails to height and center-crops.
+        """
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg(width=2000, height=1000)
+        mock_Image = Mock()
+
+        # aresize 2000x1000 => 1000x800 should thumbnail to 1600x800 and then
+        # paste into the center of a new image, losing some left/right content.
+        with patch('lazythumbs.views.Image', mock_Image):
+            img = renderer.aresize(width=1000, height=800, img=mock_img)
+
+        self.assertEqual(mock_img.called, ['resize'])
+        self.assertEqual(img, mock_Image.new.return_value)
+        self.assertEqual(mock_Image.new.call_args[1]['size'], (1000, 800))
+        img.paste.assert_called_once_with(mock_img, (-300, 0))
+
+    def test_aresize_portrait(self):
+        """
+        Ensure aresize action from portrait to landscape shrinks image and
+        mattes sides.
+        """
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg(width=1000, height=2000)
+        mock_Image = Mock()
+
+        # aresize 1000x2000 => 600x500 should thumbnail to 250x500 and then
+        # paste into the center of a new image, leaving matte background
+        # content on the sides.
+        with patch('lazythumbs.views.Image', mock_Image):
+            img = renderer.aresize(width=600, height=500, img=mock_img)
+
+        self.assertEqual(mock_img.called, ['resize'])
+        self.assertEqual(img, mock_Image.new.return_value)
+        self.assertEqual(mock_Image.new.call_args[1]['size'], (600, 500))
+        img.paste.assert_called_once_with(mock_img, (175, 0))
 
 
 class GetViewTest(TestCase):

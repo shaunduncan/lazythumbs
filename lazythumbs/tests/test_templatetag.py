@@ -133,6 +133,20 @@ class LazythumbRenderTest(LazythumbsTemplateTagTestCase):
         self.assertEqual(img['width'], '48')
         self.assertEqual(img['height'], '50')
 
+    def test_aresize_valid_geo(self):
+        """
+        for an aresize, check that width/height are set appropriately in the
+        as variable for a valid geometry Variable.
+        """
+        self.context['geo'] = '48x50'
+
+        node = node_factory(LazythumbNode, "tag 'url' aresize geo as img")
+        node.render(self.mock_cxt)
+
+        img = self.context['img']
+        self.assertEqual(img['width'], '48')
+        self.assertEqual(img['height'], '50')
+
     def test_thumbnail_and_url_valid_geo(self):
         """
         for a thumbnail, check that width and/or height is set appropriately in
