@@ -196,8 +196,21 @@ class LazyThumbRenderer(View):
 
     @action
     def aresize(self, width, height, img_path=None, img=None):
+        """
+        Thumbnail and crop, taking source and target aspect ratios into
+        consideration. When source and target orientation is the same,
+        scale to eliminate matting, and center-crop the image. When source
+        and target dimensions have opposite orientation, scale to show the
+        entire image without cropping, and matte. The former minimizes
+        visually unattractive matting, and the latter eliminates center-crop
+        body images.
 
-        # FIXME: This is largely copied and pasted form resize() above. Refactor to share code.
+        :param width: desired width in pixels. required.
+        :param height: desired height in pixels. required.
+        :param img_path: a path to an image on the filesystem
+        :param img: a PIL Image object
+        :returns: a PIL Image object
+        """
 
         img = img or self.get_pil_from_path(img_path)
         if not img:
@@ -216,8 +229,9 @@ class LazyThumbRenderer(View):
         is_landscape = (aspect >= 1.0)
 
         if source_is_landscape == is_landscape:
-            # Source and target have the same orientation. Scale according to aspect ratio
-            # to maximize photo area and minimize horizontal/vertical border insertion.
+            # Source and target have the same orientation. Scale according to
+            # aspect ratio to maximize photo area and minimize horizontal/
+            # vertical border insertion.
             if source_aspect > aspect:
                 # Source has wider ratio than target. Scale to height.
                 target_width, target_height = None, height
@@ -225,9 +239,10 @@ class LazyThumbRenderer(View):
                 # Source has taller ratio than target. Scale to width.
                 target_width, target_height = width, None
         else:
-            # Source and target have opposite orientations. Scale to source's longer dimension.
-            # This will fill with horiz or vert bars around the image, but it will effectively
-            # maintain the source orientation.
+            # Source and target have opposite orientations. Scale to source's
+            # longer dimension. This will matte the image, but it will
+            # effectively maintain the visual appearance of the source
+            # orientation.
             if source_is_landscape:
                 target_width, target_height = width, None
             else:
@@ -243,6 +258,10 @@ class LazyThumbRenderer(View):
         if img.size == (width, height):
             return img
 
+        # Create a new image of the target size, and paste the resized image
+        # into it. This effectively mattes if necessary by pasting over the
+        # matte background color, and it crops if necessary by pasting outside
+        # the result image bounds.
         offset_x = (width - img.size[0]) / 2
         offset_y = (height - img.size[1]) / 2
         result = Image.new(mode='RGB', size=(width, height), color=MATTE_BACKGROUND_COLOR)
