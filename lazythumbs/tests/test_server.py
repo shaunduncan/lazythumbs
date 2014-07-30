@@ -126,7 +126,7 @@ class RenderTest(TestCase):
         mock_Image = Mock()
 
         # aresize 1500x1000 => 750x400 should thumbnail to 750x500 and then
-        # paste into the center of a new image, losing some top/right content.
+        # paste into the center of a new image, losing some top/bottom content.
         with patch('lazythumbs.views.Image', mock_Image):
             img = renderer.aresize(width=750, height=400, img=mock_img)
 
