@@ -203,7 +203,8 @@ class LazyThumbRenderer(View):
         and target dimensions have opposite orientation, scale to show the
         entire image without cropping, and matte. The former minimizes
         visually unattractive matting, and the latter eliminates center-crop
-        body images.
+        body images. Due to contractual obligations, images are never
+        increased in size and are instead matted if too small.
 
         :param width: desired width in pixels. required.
         :param height: desired height in pixels. required.
@@ -216,11 +217,11 @@ class LazyThumbRenderer(View):
         if not img:
             raise ValueError('unable to find img given args')
 
-        source_width = img.size[0]
-        source_height = img.size[1]
-
-        if width >= source_width and height >= source_height:
+        # If we're already the right size, don't do anything.
+        if img.size == (width, height):
             return img
+
+        source_width, source_height = img.size
 
         source_aspect = float(source_width) / source_height
         aspect = float(width) / height if width and height else source_aspect
@@ -248,11 +249,14 @@ class LazyThumbRenderer(View):
             else:
                 target_width, target_height = None, height
 
-        img = self.thumbnail(
-            width = target_width,
-            height = target_height,
-            img = img
-        )
+        # We never expand images. Resize only if the target is smaller.
+        if ((target_width and target_width < source_width) or
+                (target_height and target_height < source_height)):
+            img = self.thumbnail(
+                width = target_width,
+                height = target_height,
+                img = img
+            )
 
         # see if we even have to crop
         if img.size == (width, height):

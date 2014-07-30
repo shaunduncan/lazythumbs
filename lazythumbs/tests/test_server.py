@@ -173,6 +173,25 @@ class RenderTest(TestCase):
         self.assertEqual(mock_Image.new.call_args[1]['size'], (600, 500))
         img.paste.assert_called_once_with(mock_img, (175, 0))
 
+    def test_aresize_small(self):
+        """
+        Ensure aresize action does not grow a small image.
+        """
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg(width=100, height=80)
+        mock_Image = Mock()
+
+        # aresize 100x80 => 300x200 should not resize, but should paste
+        # into the center of a new image, leaving matte background content
+        # on the sides.
+        with patch('lazythumbs.views.Image', mock_Image):
+            img = renderer.aresize(width=300, height=200, img=mock_img)
+
+        self.assertEqual(mock_img.called, [])
+        self.assertEqual(img, mock_Image.new.return_value)
+        self.assertEqual(mock_Image.new.call_args[1]['size'], (300, 200))
+        img.paste.assert_called_once_with(mock_img, (100, 60))
+
 
 class GetViewTest(TestCase):
     """ Test behavior of LazyThumbRenderer.get """
