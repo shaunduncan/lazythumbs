@@ -10,7 +10,6 @@ from django.conf import settings
 
 logger = logging.getLogger()
 
-LT_IMG_URL_FORMAT = '%slt_cache/%s/%s/%s'
 # This is a 1x1 transparent GIF
 LT_PLACEHOLDER_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
 
@@ -173,7 +172,7 @@ def compute_img(thing, action, geometry):
             return exit(url, s_w, s_h)
 
     geometry = build_geometry(action, width, height)
-    src = LT_IMG_URL_FORMAT % (url_prefix, action, geometry, url)
+    src = _construct_lt_img_url(url_prefix, action, geometry, url)
 
     if getattr(settings, 'LAZYTHUMBS_DUMMY', False):
         src = 'http://placekitten.com/%s/%s' % (width, height)
@@ -197,7 +196,7 @@ def get_placeholder_url(thing):
     if parsed.scheme or parsed.netloc:
         return url
 
-    return LT_IMG_URL_FORMAT % (url_prefix, '{{ action }}', '{{ dimensions }}', url)
+    return _construct_lt_img_url(url_prefix, '{{ action }}', '{{ dimensions }}', url)
 
 
 def get_img_attrs(thing, action, width='', height=''):
@@ -264,4 +263,6 @@ def _get_url_img_obj_from_thing(thing):
     if not url_prefix:
         url_prefix = mapped_urls[settings.MEDIA_URL]
 
-    return (url, url_prefix, img_object)
+    
+def _construct_lt_img_url(prefix, action, geometry, url):
+    return '/'.join([prefix.rstrip('/'), 'lt_cache', action, geometry, url])
