@@ -10,6 +10,7 @@
  * **LAZYTHUMBS\_CACHE\_TIMEOUT** how long before a thumbnail gets regenerated
  * **LAZYTHUMBS\_DUMMY** whether or not the lazythumb template tag just uses placekitten
  * **LAZYTHUMBS\_URL** url prefix for lazythumb requests. used by template tag. (usually MEDIA\_URL or '')
+ * **LAZYTHUMBS\_EXTRA_URLS** dictionary mapping of source urls to url prefixes for lazythumb requests. used by template tag
 
 * add to urls.py
 

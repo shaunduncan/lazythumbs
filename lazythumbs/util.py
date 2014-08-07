@@ -10,7 +10,7 @@ from django.conf import settings
 
 logger = logging.getLogger()
 
-LT_IMG_URL_FORMAT = getattr(settings, 'LAZYTHUMBS_URL', '/') + 'lt_cache/%s/%s/%s'
+LT_IMG_URL_FORMAT = '%slt_cache/%s/%s/%s'
 # This is a 1x1 transparent GIF
 LT_PLACEHOLDER_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
 
@@ -112,7 +112,7 @@ def compute_img(thing, action, geometry):
     exit = lambda u, w, h, **_attrs: dict(src=urljoin(settings.MEDIA_URL, u), width=str(w or ''), height=str(h or ''), **_attrs)
 
     # compute url and img_object
-    url, img_object = _get_url_img_obj_from_thing(thing)
+    url, url_prefix, img_object = _get_url_img_obj_from_thing(thing)
 
     # early exit if didn't get a url
     if not url:
@@ -173,7 +173,7 @@ def compute_img(thing, action, geometry):
             return exit(url, s_w, s_h)
 
     geometry = build_geometry(action, width, height)
-    src = LT_IMG_URL_FORMAT % (action, geometry, url)
+    src = LT_IMG_URL_FORMAT % (url_prefix, action, geometry, url)
 
     if getattr(settings, 'LAZYTHUMBS_DUMMY', False):
         src = 'http://placekitten.com/%s/%s' % (width, height)
@@ -191,13 +191,13 @@ def get_img_url(thing, action, width=None, height=None):
 
 def get_placeholder_url(thing):
     """ return a lt_cache URL with placeholders for action and dimensions """
-    url, _ = _get_url_img_obj_from_thing(thing)
+    url, url_prefix, _ = _get_url_img_obj_from_thing(thing)
 
     parsed = urlparse(url)
     if parsed.scheme or parsed.netloc:
         return url
 
-    return LT_IMG_URL_FORMAT % ('{{ action }}', '{{ dimensions }}', url)
+    return LT_IMG_URL_FORMAT % (url_prefix, '{{ action }}', '{{ dimensions }}', url)
 
 
 def get_img_attrs(thing, action, width='', height=''):
@@ -242,12 +242,26 @@ def get_source_img_attrs(thing):
 
 def _get_url_img_obj_from_thing(thing):
     img_object = None
+    url_prefix = None
+
     if isinstance(thing, basestring):
         url = thing
     else:
         img_object = thing
         url = quack(img_object, ['name', 'url', 'path'], ['photo', 'image'], '')
 
-    url = url.replace(settings.MEDIA_URL, '')
+    mapped_urls =  {
+        settings.MEDIA_URL: getattr(settings, 'LAZYTHUMBS_URL', '/')
+    }
+    mapped_urls.update(getattr(settings, 'LAZYTHUMBS_EXTRA_URLS', {}))
 
-    return (url, img_object)
+
+    for whitelisted_url, thumbnail_url in mapped_urls.items():
+        if url.startswith(whitelisted_url):
+            url = url.replace(whitelisted_url, '')
+            url_prefix = thumbnail_url
+
+    if not url_prefix:
+        url_prefix = mapped_urls[settings.MEDIA_URL]
+
+    return (url, url_prefix, img_object)
