@@ -275,7 +275,7 @@ class TestGetPlaceholderUrl(TestCase):
 
     def test_local_url(self):
         path = 'path/img.jpg'
-        expected = _construct_lt_img_url (settings.LAZYTHUMBS_URL, '{{ action }}', '{{ dimensions }}', path)
+        expected = 'http://media.example.com/media/lt/lt_cache/{{ action }}/{{ dimensions }}/path/img.jpg'
         self.assertEqual(get_placeholder_url(path), expected)
 
     def test_foreign_url(self):
