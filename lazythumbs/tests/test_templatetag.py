@@ -293,4 +293,6 @@ class ImgAttrsRenderTest(LazythumbsTemplateTagTestCase):
                                 'height': '49'}
         output = node.render(self.mock_cxt)
 
-        self.assertEqual(output, 'height="49" src="test.png" width="50"')
+        self.assertTrue('src="test.png"' in output)
+        self.assertTrue('height="49"'in output)
+        self.assertTrue('width="50"'in output)
