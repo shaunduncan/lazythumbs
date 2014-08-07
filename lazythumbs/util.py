@@ -264,6 +264,6 @@ def _get_url_img_obj_from_thing(thing):
 
     return (url, url_prefix, img_object)
 
-    
+
 def _construct_lt_img_url(prefix, action, geometry, url):
     return '/'.join([prefix.rstrip('/'), 'lt_cache', action, geometry, url])
