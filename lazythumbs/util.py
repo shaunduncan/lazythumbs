@@ -13,6 +13,11 @@ logger = logging.getLogger()
 # This is a 1x1 transparent GIF
 LT_PLACEHOLDER_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
 
+MAPPED_URLS = {
+    settings.MEDIA_URL: getattr(settings, 'LAZYTHUMBS_URL', '/')
+}
+MAPPED_URLS.update(getattr(settings, 'LAZYTHUMBS_EXTRA_URLS', {}))
+
 
 def geometry_parse(action, geometry, exc):
     """ Compute width and height from a geometry string
@@ -249,19 +254,15 @@ def _get_url_img_obj_from_thing(thing):
         img_object = thing
         url = quack(img_object, ['name', 'url', 'path'], ['photo', 'image'], '')
 
-    mapped_urls =  {
-        settings.MEDIA_URL: getattr(settings, 'LAZYTHUMBS_URL', '/')
-    }
-    mapped_urls.update(getattr(settings, 'LAZYTHUMBS_EXTRA_URLS', {}))
-
-
-    for whitelisted_url, thumbnail_url in mapped_urls.items():
+    for whitelisted_url, thumbnail_url in MAPPED_URLS.items():
         if url.startswith(whitelisted_url):
             url = url.replace(whitelisted_url, '')
             url_prefix = thumbnail_url
 
     if not url_prefix:
-        url_prefix = mapped_urls[settings.MEDIA_URL]
+        url_prefix = MAPPED_URLS[settings.MEDIA_URL]
+
+    return (url, url_prefix, img_object)
 
     
 def _construct_lt_img_url(prefix, action, geometry, url):
