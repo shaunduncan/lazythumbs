@@ -311,7 +311,8 @@ class LazyThumbRenderer(View):
         if not (img or img_path):
             raise ValueError('unable to find img given args')
         img = img or self.get_pil_from_path(img_path)
-        if width and height or width is None and height is None:
+
+        if (width and height) or (width is None and height is None):
             raise ValueError('thumbnail requires width XOR height; got (%s, %s)' % (width, height))
 
         source_width = img.size[0]

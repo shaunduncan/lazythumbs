@@ -52,6 +52,18 @@ class TestMatte(TestCase):
         self.assertRaises(ValueError, renderer.matte, 200, 200)
 
 
+class TestScale(TestCase):
+
+    def test_maximum_width_and_height(self):
+        renderer = LazyThumbRenderer()
+        new_img = renderer.scale(1000, 1000, img_path=TEST_IMG_GIF)
+        self.assertEqual(new_img.size, (399, 499))
+
+    def test_no_img(self):
+        renderer = LazyThumbRenderer()
+        self.assertRaises(ValueError, renderer.scale, 200, 200)
+
+
 class RenderTest(TestCase):
     """ test image rendering process """
 
@@ -97,6 +109,18 @@ class RenderTest(TestCase):
         self.assertEqual(img.size[1], 50)
         self.assertEqual(len(mock_img.called), 1)
         self.assertTrue('resize' in mock_img.called)
+
+    def test_thumbnail_width_and_height_specified(self):
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg()
+        mock_img.size = (100, 100)
+        self.assertRaises(ValueError, renderer.thumbnail, width=50, height=50, img=mock_img)
+
+    def test_thumbnail_no_width_and_no_height_specified(self):
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg()
+        mock_img.size = (100, 100)
+        self.assertRaises(ValueError, renderer.thumbnail, img=mock_img)
 
     def test_thumbnail_no_upscaling(self):
         """
