@@ -95,7 +95,7 @@ class LazyThumbRenderer(View):
         try:
             # does rendered file already exist?
             raw_data = self.fs.open(rendered_path).read()
-        except IOError:
+        except IOError as e:
             if was_404 == 0:
                 # then it *was* here last time. if was_404 had been None then
                 # it makes sense for rendered image to not exist yet: we
@@ -122,7 +122,7 @@ class LazyThumbRenderer(View):
 
                 try:
                     pil_img.save(buf, **params)
-                except IOError:
+                except IOError as e:
                     logger.exception("pil_img.save(%r)" % params)
                     # TODO reevaluate this except when we make options smarter
                     logger.info("Failed to create new image %s . Trying without options" % rendered_path)
@@ -167,9 +167,9 @@ class LazyThumbRenderer(View):
         :param img: a PIL Image object
         :returns: a PIL Image object
         """
-        img = img or self.get_pil_from_path(img_path)
-        if not img:
+        if not (img or img_path):
             raise ValueError('unable to find img given args')
+        img = img or self.get_pil_from_path(img_path)
 
         source_width = img.size[0]
         source_height = img.size[1]
@@ -284,9 +284,10 @@ class LazyThumbRenderer(View):
         :param img: a PIL Image object
         :returns: a PIL Image object
         """
-        img = img or self.get_pil_from_path(img_path)
-        if not img:
+
+        if not (img or img_path):
             raise ValueError('unable to find img given args')
+        img = img or self.get_pil_from_path(img_path)
 
         new_img = Image.new('RGB', (width, height), MATTE_BACKGROUND_COLOR)
         img.thumbnail((width, height), Image.ANTIALIAS)
@@ -307,9 +308,9 @@ class LazyThumbRenderer(View):
         :param img: a PIL Image object
         :returns: a PIL Image object
         """
+        if not (img or img_path):
+            raise ValueError('unable to find img given args')
         img = img or self.get_pil_from_path(img_path)
-        if not img:
-            raise ValueError('unable to determine find img given args')
         if width and height or width is None and height is None:
             raise ValueError('thumbnail requires width XOR height; got (%s, %s)' % (width, height))
 
@@ -338,9 +339,9 @@ class LazyThumbRenderer(View):
         :param img: a PIL Image object
         :returns: a PIL Image object
         """
+        if not (img or img_path):
+            raise ValueError('unable to find img given args')
         img = img or self.get_pil_from_path(img_path)
-        if not img:
-            raise ValueError('unable to determine find img given args')
 
         if width > img.size[0]:
             width = img.size[0]

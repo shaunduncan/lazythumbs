@@ -4,7 +4,7 @@ from mock import patch, Mock
 
 from django.conf import settings
 from lazythumbs.util import geometry_parse, build_geometry, compute_img, get_img_attrs, get_source_img_attrs
-from lazythumbs.util import get_format, get_attr_string, get_placeholder_url, _construct_lt_img_url
+from lazythumbs.util import get_format, get_attr_string, get_placeholder_url, _construct_lt_img_url, get_img_url
 
 class TestGeometry(TestCase):
     class TestException:
@@ -96,6 +96,15 @@ class TestComputeIMG(TestCase):
                 return url
         return fake_quack
 
+    def test_LAZYTHUMGS_DUMMY(self):
+        settings.LAZYTHUMBS_DUMMY = True
+        url = settings.MEDIA_URL + 'path/img.jpg'
+        attrs = compute_img(url, "resize", "200x200")
+        self.assertEqual(attrs['height'], '200')
+        self.assertEqual(attrs['width'], '200')
+        self.assertEqual(attrs['src'], 'http://placekitten.com/200/200')
+        settings.LAZYTHUMBS_DUMMY = False
+
     def test_foreign_url(self):
         """ if someone tries to thumbnail an image not at MEDIA_ROOT return it unchanged """
         path = "http://www.notus.com/path/to/img.jpg"
@@ -161,6 +170,17 @@ class TestComputeIMG(TestCase):
             self.assertEqual(attrs['height'], '5')
         settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = old_x_for_dim
 
+    def test_width_bigger_than_img(self):
+        """  """
+        old_x_for_dim = getattr(settings, 'LAZYTHUMBS_USE_X_FOR_DIMENSIONS', None)
+        settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = False
+        with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=100, height=200)):
+            attrs = compute_img(Mock(), 'resize', '300')
+            self.assertEqual(attrs['src'], settings.MEDIA_URL + 'path/img.jpg')
+            self.assertEqual(attrs['width'], '100')
+            self.assertEqual(attrs['height'], '200')
+        settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = old_x_for_dim
+
     def test_height_resize(self):
         """ resize with only height returns the proper path and size """
         old_x_for_dim = getattr(settings, 'LAZYTHUMBS_USE_X_FOR_DIMENSIONS', None)
@@ -198,6 +218,13 @@ class TestComputeIMG(TestCase):
             self.assertEqual(attrs['width'], '5')
             self.assertEqual(attrs['height'], '10')
 
+    def test_geometry_responsive(self):
+        """ thumbnail with responsive geometry should give us a placeholder """
+        attrs = compute_img('path/img.jpg', 'resize', 'responsive')
+        self.assertEqual(attrs['height'], '')
+        self.assertEqual(attrs['width'], '')
+        self.assertEqual(attrs['src'], "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==")
+
 
 class TestGetImgAttrs(TestCase):
     @patch('lazythumbs.util.compute_img')
@@ -217,6 +244,16 @@ class TestGetImgAttrs(TestCase):
         """ get_img_attrs call compute with the proper geometry when it's given both dimensions """
         get_img_attrs('url', 'noaction', 10, 20)
         self.assertEqual(mock_ci.call_args[0][2], '10x20')
+
+
+class TestGetImgURL(TestCase):
+
+    @patch('lazythumbs.util.compute_img')
+    def test_call(self, mock_ci):
+        """ get_img_attrs calls compute with the proper geometry when it's given no height """
+        mock_ci.side_effect = lambda t, a, w: {'src': '999'}
+        result = get_img_url('url', 'noaction', 10, 10)
+        self.assertEqual(result, '999')
 
 
 class TestGetFormat(TestCase):

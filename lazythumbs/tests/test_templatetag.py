@@ -296,3 +296,6 @@ class ImgAttrsRenderTest(LazythumbsTemplateTagTestCase):
         self.assertTrue('src="test.png"' in output)
         self.assertTrue('height="49"'in output)
         self.assertTrue('width="50"'in output)
+
+    def test_templatesyntaxerror(self):
+        self.assertRaises(TemplateSyntaxError, node_factory, ImgAttrsNode, "tag img foo")

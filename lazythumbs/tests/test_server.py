@@ -11,6 +11,8 @@ from lazythumbs.urls import urlpatterns
 from django.core.urlresolvers import reverse, resolve
 
 
+TEST_IMG_GIF = os.path.join(os.path.dirname(__file__), "testdata", "testimage.gif")
+
 class MockCache(object):
     def __init__(self):
         self.cache = {}
@@ -38,6 +40,18 @@ class MockImg(object):
         return self
 
 
+class TestMatte(TestCase):
+
+    def test_new_img(self):
+        renderer = LazyThumbRenderer()
+        new_img = renderer.matte(200, 200, img_path=TEST_IMG_GIF)
+        self.assertEqual(new_img.size, (200, 200))
+
+    def test_no_img(self):
+        renderer = LazyThumbRenderer()
+        self.assertRaises(ValueError, renderer.matte, 200, 200)
+
+
 class RenderTest(TestCase):
     """ test image rendering process """
 
@@ -48,7 +62,7 @@ class RenderTest(TestCase):
         """
         class MyRenderer(LazyThumbRenderer):
             @action
-            def myaction(self):
+            def myaction(self):  # pragma: no cover
                 pass
 
         renderer = MyRenderer()
@@ -66,6 +80,10 @@ class RenderTest(TestCase):
         self.assertEqual(img.size[0], 100)
         self.assertEqual(img.size[1], 100)
         self.assertEqual(len(mock_img.called), 0)
+
+    def test_thumbnail_no_img(self):
+        renderer = LazyThumbRenderer()
+        self.assertRaises(ValueError, renderer.thumbnail, 200, 200)
 
     def test_thumbnail_square(self):
         """
@@ -104,6 +122,10 @@ class RenderTest(TestCase):
         self.assertEqual(len(mock_img.called), 2)
         self.assertTrue('crop' in mock_img.called)
         self.assertTrue('resize' in mock_img.called)
+
+    def test_resize_no_img(self):
+        renderer = LazyThumbRenderer()
+        self.assertRaises(ValueError, renderer.resize, 200, 200)
 
     def test_resize_no_upscaling(self):
         """
@@ -283,10 +305,26 @@ class GetViewTest(TestCase):
                 resp = self.renderer.get(req, 'thumbnail', '48', 'i/p')
         self.assertEqual(resp.status_code, 404)
 
+    def test_naughty_paths_root(self):
+        resp = self.renderer.get(None, 'thumbnail', '48', '/')
+        self.assertEqual(resp.status_code, 404)
+
+    def test_naughty_paths_traverse(self):
+        resp = self.renderer.get(None, 'thumbnail', '48', '../')
+        self.assertEqual(resp.status_code, 404)
+
+    def test_invalid_action(self):
+        resp = self.renderer.get(None, 'invalid_action', '48', 'i/p')
+        self.assertEqual(resp.status_code, 404)
+
+    def test_invalid_geometry(self):
+        resp = self.renderer.get(None, 'thumbnail', '48x48x48', 'i/p')
+        self.assertEqual(resp.status_code, 404)
+
+
 class TestOddFiles(TestCase):
 
-    # Disabled for now because PIL on Hudson doesn't have JPEG support
-    def disabled_test_extensionless_gif(self):
+    def test_extensionless_gif(self):
         """If the image file is a GIF without an extension, we can produce
         a valid thumbnail for it."""
 
@@ -307,7 +345,7 @@ class TestOddFiles(TestCase):
             with patch('lazythumbs.views.settings') as settings2:
                 settings2.MEDIA_ROOT = MEDIA_ROOT
 
-                testfile = os.path.join(os.path.dirname(__file__), "testdata", "testimage.gif")
+                testfile = TEST_IMG_GIF
                 filename = None
                 try:
                     filename = os.path.join(MEDIA_ROOT, "gif_without_extension")
@@ -322,6 +360,7 @@ class TestOddFiles(TestCase):
                         geometry="x50",
                         source_path=source_path
                         )
+                    # if you get 404, jpeg encoder is probably missing for Pillow
                     self.assertEqual(200, rsp.status_code)
                 finally:
                     if filename:
