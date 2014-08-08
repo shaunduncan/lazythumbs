@@ -11,7 +11,7 @@ setup(
     url='https://github.com/coxmediagroup/lazythumbs',
     packages=find_packages(exclude=['tests', 'tests.*']),
     platforms='any',
-    install_requires=["Django", "Pillow"],
+    install_requires=["Pillow"],
     zip_safe=False,
     classifiers=[
         'Environment :: Web Environment',
