@@ -39,7 +39,7 @@ def geometry_parse(action, geometry, exc):
         height_match = re.match(r'^(?:\d+)?x(\d+)$', geometry)
 
         if (width_match or height_match):
-            logger.info("Consider adopting the new 'Width/Height' syntax")
+            logger.debug("Consider adopting the new 'Width/Height' syntax")
         else:
             raise exc
 
