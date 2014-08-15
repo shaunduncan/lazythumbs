@@ -421,6 +421,7 @@ class TestUrlMatching(TestCase):
     @patch('django.conf.settings')
     def test_url_matching(self, settings):
         settings.ROOT_URLCONF = urlpatterns
+        settings.USE_I18N = False
         routes_tested = 0
         for path1, path2 in test_paths(self.routes_to_test):
             routes_tested += 1

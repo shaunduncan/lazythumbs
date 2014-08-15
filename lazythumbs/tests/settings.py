@@ -24,7 +24,8 @@ CACHES = {
 
 
 TEMPLATE_DEBUG = DEBUG
-DATABASES = {}
+DATABASES = {'default': {'ENGINE': 'django.db.backends.dummy'}}
+SECRET_KEY = "foobar"
 ADMINS = ( )
 MANAGERS = ADMINS
 TIME_ZONE = 'America/Chicago'
