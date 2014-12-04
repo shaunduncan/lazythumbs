@@ -37,7 +37,7 @@ var lazythumbs = {
             width = img.clientWidth;
             height = img.clientHeight;
 
-            aspectratio = data(img, 'aspectratio')
+            aspectratio = data(img, 'aspectratio');
             if (aspectratio) {
                 matches = /(\d+):(\d+)/.exec(aspectratio);
                 old_ratio = matches[1] / matches[2];
@@ -140,14 +140,14 @@ var lazythumbs = {
                 timeout = null;
                 if (!immediate) {
                     func.apply(context, args);
-                };
-            };
+                }
+            }
             var callNow = immediate && !timeout;
             clearTimeout(timeout);
             timeout = setTimeout(later, wait);
             if (callNow) {
                 func.apply(context, args);
-            };
+            }
         };
     };
 

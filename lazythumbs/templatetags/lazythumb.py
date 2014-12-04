@@ -7,11 +7,9 @@
     {% endlazythumb %}
 """
 import logging
-import re
-import json
 
 from django.template import TemplateSyntaxError, Library, Node, Variable
-from lazythumbs.util import compute_img, get_attr_string, get_placeholder_url, get_source_img_attrs
+from lazythumbs.util import compute_img, get_attr_string
 from lazythumbs.views import LazyThumbRenderer
 
 
