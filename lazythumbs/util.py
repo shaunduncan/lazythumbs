@@ -128,6 +128,7 @@ def compute_img(thing, action, geometry, options=None):
     parsed = urlparse(url)
     if parsed.scheme or parsed.netloc:
         return dict(src=url,  width=str(source_width(img_object) or ''), height=str(source_height(img_object) or ''))
+
     # If this is a responsive image, we only need to provide a placeholder for the moment
     if geometry == 'responsive':
         attrs = {
