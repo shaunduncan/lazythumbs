@@ -22,15 +22,21 @@ logger = logging.getLogger()
 
 register.tag('lazythumb', lambda p, t: LazythumbNode(p, t))
 class LazythumbNode(Node):
-    usage = 'Expected invocation is {% lazythumb url|ImageFile|Object action geometry as variable %}'
+    usage = 'Expected invocation is {% lazythumb url|ImageFile|Object action geometry [ratio] as variable %}'
 
     def __init__(self, parser, token):
         # simple alias
         tse = lambda m: TemplateSyntaxError('lazythumb: %s' % m)
         bits = token.contents.split()
-        try:
+
+        if len(bits) == 7:
+            _, thing, action, geometry, ratio, _, as_var = bits
+        elif len(bits) == 6:
             _, thing, action, geometry, _, as_var = bits
-        except ValueError:
+            # When we try to resolve this variable, we want it
+            # to return an empty string.
+            ratio = '""'
+        else:
             raise tse(self.usage)
 
         self.as_var = as_var
@@ -41,6 +47,7 @@ class LazythumbNode(Node):
 
         self.thing = Variable(thing)
         self.geometry = Variable(geometry)
+        self.ratio = Variable(ratio)
 
         self.nodelist = parser.parse(('endlazythumb',))
         parser.delete_first_token()
@@ -50,9 +57,10 @@ class LazythumbNode(Node):
         thing = self.thing.resolve(context)
         action = self.action
         geometry = self.geometry.resolve(context)
+        ratio = self.ratio.resolve(context)
 
         context.push()
-        context[self.as_var] = compute_img(thing, action, geometry)
+        context[self.as_var] = compute_img(thing, action, geometry, ratio)
         output = self.nodelist.render(context)
         context.pop()
         return output

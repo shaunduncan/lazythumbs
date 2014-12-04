@@ -30,14 +30,24 @@ var lazythumbs = {
     function update_responsive_images(e) {
 
         var responsive_images = document.querySelectorAll('.lt-responsive-img');
-        var img, i, width, height, needs_loaded, url_template, old_ratio, new_ratio, wdelta, hdelta, roundedsize;
+        var img, i, width, height, needs_loaded, url_template, old_ratio, new_ratio, wdelta, hdelta, roundedsize, matches;
 
         for (i=0; i < responsive_images.length; i++) {
             img = responsive_images[i];
             width = img.clientWidth;
             height = img.clientHeight;
-            old_ratio = data(img, 'ltwidth') / data(img, 'ltheight');
-            new_ratio = width / height;
+
+            aspectratio = data(img, 'aspectratio')
+            if (aspectratio) {
+                matches = /(\d+):(\d+)/.exec(aspectratio);
+                old_ratio = matches[1] / matches[2];
+                // We're not going to allow the aspect ratio to change.
+                new_ratio = old_ratio;
+                height = width * (1/old_ratio);
+            } else {
+                old_ratio = data(img, 'ltwidth') / data(img, 'ltheight');
+                new_ratio = width / height;
+            }
 
             if (width===0 || height===0) {
                 // The image is currently hidden
