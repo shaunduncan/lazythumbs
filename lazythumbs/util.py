@@ -106,8 +106,10 @@ def quack(thing, properties, levels=[], default=None):
     return default
 
 
-def compute_img(thing, action, geometry, ratio=None):
+def compute_img(thing, action, geometry, options=None):
     """ generate a src url, width and height tuple for given object or url"""
+    if options is None:
+        options = {}
 
     # We use these lambdas to stay lazy: we don't ever want to look up
     # source dimensions if we can avoid it.
@@ -131,9 +133,10 @@ def compute_img(thing, action, geometry, ratio=None):
         attrs = {
             'class': 'lt-responsive-img',
             'data-urltemplate': get_placeholder_url(thing),
-            'data-aspectratio': ratio,
             'data-action': action,
         }
+        if 'ratio' in options:
+            attrs['data-aspectratio'] = options['ratio']
         return exit(LT_PLACEHOLDER_SRC, source_width(thing), source_height(thing), **attrs)
 
     # extract/ensure width & height

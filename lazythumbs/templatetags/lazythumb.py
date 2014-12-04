@@ -22,21 +22,27 @@ logger = logging.getLogger()
 
 register.tag('lazythumb', lambda p, t: LazythumbNode(p, t))
 class LazythumbNode(Node):
-    usage = 'Expected invocation is {% lazythumb url|ImageFile|Object action geometry [ratio] as variable %}'
+    usage = 'Expected invocation is {% lazythumb url|ImageFile|Object action geometry [**kwargs] as variable %}'
 
     def __init__(self, parser, token):
         # simple alias
         tse = lambda m: TemplateSyntaxError('lazythumb: %s' % m)
         bits = token.contents.split()
 
-        if len(bits) == 7:
-            _, thing, action, geometry, ratio, _, as_var = bits
-        elif len(bits) == 6:
-            _, thing, action, geometry, _, as_var = bits
-            # When we try to resolve this variable, we want it
-            # to return an empty string.
-            ratio = '""'
-        else:
+        try:
+            # Everything before kwargs
+            _, thing, action, geometry = bits[0:4]
+            # as variable (and the word 'as' itself)
+            if bits[-2] != 'as':
+                raise ValueError("Expected 'as' before assignment variable.")
+            as_var = bits[-1]
+            # Keyword arguments
+            self.kwargs = {}
+            raw_kwargs = bits[4:-2]
+            for kwarg in raw_kwargs:
+                kwarg_name, kwarg_value = kwarg.split('=')
+                self.kwargs[kwarg_name] = Variable(kwarg_value)
+        except ValueError:
             raise tse(self.usage)
 
         self.as_var = as_var
@@ -47,7 +53,6 @@ class LazythumbNode(Node):
 
         self.thing = Variable(thing)
         self.geometry = Variable(geometry)
-        self.ratio = Variable(ratio)
 
         self.nodelist = parser.parse(('endlazythumb',))
         parser.delete_first_token()
@@ -57,10 +62,13 @@ class LazythumbNode(Node):
         thing = self.thing.resolve(context)
         action = self.action
         geometry = self.geometry.resolve(context)
-        ratio = self.ratio.resolve(context)
+
+        options = {}
+        for k, v in self.kwargs.items():
+            options[k] = v.resolve(context)
 
         context.push()
-        context[self.as_var] = compute_img(thing, action, geometry, ratio)
+        context[self.as_var] = compute_img(thing, action, geometry, options)
         output = self.nodelist.render(context)
         context.pop()
         return output
