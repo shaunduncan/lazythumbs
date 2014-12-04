@@ -115,9 +115,41 @@ var lazythumbs = {
         }
 
         var r = update_responsive_images.apply(this, arguments);
-        bind_event("resize", update_responsive_images);
+        bind_event("resize", debounce(update_responsive_images, 500));
         return r;
     }
+
+    /* Prevents execution of a function more than once per `wait` ms.
+     *
+     * Note:
+     *   This is lifted directly from http://davidwalsh.name/function-debounce,
+     *   which itself lifted this code from an earlier version of Underscore.js
+     *
+     * func         The function to debounce.
+     * wait         The size of the window (in milliseconds) during which only
+     *              the *last* call of `func` will be executed.
+     * immediate    Instead of executing only the *last* call of `func` during
+     *              the `wait` window, execute the *first* call, and drop all
+     *              other executions during the window.
+     */
+    function debounce(func, wait, immediate) {
+        var timeout;
+        return function() {
+            var context = this, args = arguments;
+            var later = function() {
+                timeout = null;
+                if (!immediate) {
+                    func.apply(context, args);
+                };
+            };
+            var callNow = immediate && !timeout;
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+            if (callNow) {
+                func.apply(context, args);
+            };
+        };
+    };
 
     function scale_size(size, scale) {
         return {
