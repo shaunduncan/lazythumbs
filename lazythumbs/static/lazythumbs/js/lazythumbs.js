@@ -186,15 +186,19 @@ var lazythumbs = {
         };
         var scale = scale_from_step(origsize, lazythumbs.FETCH_STEP_MIN);
         var current = candidate;
+        var final_size = candidate;
+        var multiplier = 1;
 
         while (current.width >= size.width && current.height >= size.height) {
+            // We want to keep the size *right* *before* the last size we
+            // encounter in this while loop; once the while loop breaks,
+            // current will be *too* *small*, so let's save the previous value.
+            final_size = current;
             // The one we're looking at is still larger, so step down
-            candidate = current;
-            current = scale_size(current, scale);
+            current = scale_size(candidate, scale * multiplier);
+            multiplier++;
         }
-
-        // Current is now too small, candidate is the next largest size.
-        return candidate;
+        return final_size;
     }
 
     lazythumbs.scale_size = scale_size;
