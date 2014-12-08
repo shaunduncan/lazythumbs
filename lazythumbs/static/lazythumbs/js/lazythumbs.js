@@ -158,6 +158,15 @@ var lazythumbs = {
         }
     }
 
+    /* scale_from_step(size, step)
+     *
+     * size     {width, height} of the image.
+     * step     the step size by which the image should grow.
+     *
+     * Using an image's size, calculate the coefficient that one would
+     * need to multiply the existing image's size by in order to grow
+     * an image by `step` pixels.
+     */
     function scale_from_step(size, step) {
         var d = Math.min(size.width, size.height);
         return (d + step) / d;
@@ -189,6 +198,10 @@ var lazythumbs = {
         var final_size = candidate;
         var multiplier = 1;
 
+        // Overview:
+        //   Starting from the image's current size, scale down in steps
+        //   (using lazythumbs.FETCH_STEP_MIN) until we've found an image that
+        //   is just barely *larger* than the size we need.
         while (current.width >= size.width && current.height >= size.height) {
             // We want to keep the size *right* *before* the last size we
             // encounter in this while loop; once the while loop breaks,
