@@ -67,8 +67,13 @@ var lazythumbs = {
             height = roundedsize.height;
 
             if (e.type !== 'load') {
-                width = Math.min(width, data(img, 'ltmaxwidth'));
-                height = Math.min(height, data(img, 'ltmaxheight'));
+                // Check if we're using a defined aspect ratio, if we aren't,
+                // we need to make sure that we don't request an image that's
+                // larger than the image actually is.
+                if(! aspectratio) {
+                    width = Math.min(width, data(img, 'ltmaxwidth'));
+                    height = Math.min(height, data(img, 'ltmaxheight'));
+                }
                 wdelta = width - data(img, 'ltwidth');
                 hdelta = height - data(img, 'ltheight');
 
