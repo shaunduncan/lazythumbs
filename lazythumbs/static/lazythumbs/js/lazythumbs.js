@@ -1,5 +1,6 @@
 var lazythumbs = {
-    FETCH_STEP_MIN: 50
+    FETCH_STEP_MIN: 50,
+    MAX_SCALE_DIMENSION: 2000
 };
 (function(lazythumbs){
 
@@ -36,6 +37,7 @@ var lazythumbs = {
             img = responsive_images[i];
             width = img.clientWidth;
             height = img.clientHeight;
+            allow_undersized = false;
 
             aspectratio = data(img, 'aspectratio');
             if (aspectratio) {
@@ -44,6 +46,7 @@ var lazythumbs = {
                 // We're not going to allow the aspect ratio to change.
                 new_ratio = old_ratio;
                 height = width * (1/old_ratio);
+                allow_undersized = true;
             } else {
                 old_ratio = data(img, 'ltwidth') / data(img, 'ltheight');
                 new_ratio = width / height;
@@ -62,7 +65,11 @@ var lazythumbs = {
                 data(img, 'ltmaxheight', img.getAttribute('height'));
             }
 
-            roundedsize = round_size_up({width: width, height: height}, {width: data(img, 'ltmaxwidth'), height: data(img, 'ltmaxheight')});
+            roundedsize = round_size_up(
+                {width: width, height: height},
+                {width: data(img, 'ltmaxwidth'), height: data(img, 'ltmaxheight')},
+                allow_undersized
+            );
             width = roundedsize.width;
             height = roundedsize.height;
 
@@ -70,7 +77,7 @@ var lazythumbs = {
                 // Check if we're using a defined aspect ratio, if we aren't,
                 // we need to make sure that we don't request an image that's
                 // larger than the image actually is.
-                if(! aspectratio) {
+                if(! allow_undersized) {
                     width = Math.min(width, data(img, 'ltmaxwidth'));
                     height = Math.min(height, data(img, 'ltmaxheight'));
                 }
@@ -186,18 +193,30 @@ var lazythumbs = {
      * rounded up by the step value so that multiple requests for similar
      * sizes can request the same, cached size.
      */
-    function round_size_up(size, origsize) {
+    function round_size_up(size, origsize, allow_undersized) {
+        var candidate = {}
         var ratio = size.width / size.height;
 
         // The largest size we would allow, in the ratio requested
-        var candidate = {
-            width: size.width<size.height ?
-                origsize.width :
-                parseInt(origsize.height * ratio)
-        ,   height: size.height<size.width ?
-                origsize.height :
-                parseInt(origsize.width / ratio)
-        };
+        if(allow_undersized) {
+            candidate = {
+                width: size.width<size.height ?
+                    lazythumbs.MAX_SCALE_DIMENSION :
+                    parseInt(lazythumbs.MAX_SCALE_DIMENSION * ratio)
+            ,   height: size.height<size.width ?
+                    lazythumbs.MAX_SCALE_DIMENSION :
+                    parseInt(lazythumbs.MAX_SCALE_DIMENSION / ratio)
+            };
+        } else {
+            candidate = {
+                width: size.width<size.height ?
+                    origsize.width :
+                    parseInt(origsize.height * ratio)
+            ,   height: size.height<size.width ?
+                    origsize.height :
+                    parseInt(origsize.width / ratio)
+            };
+        }
         var scale = scale_from_step(origsize, lazythumbs.FETCH_STEP_MIN);
         var current = candidate;
         var final_size = candidate;
