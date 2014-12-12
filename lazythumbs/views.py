@@ -156,7 +156,36 @@ class LazyThumbRenderer(View):
         return self.two_hundred(raw_data, img_format)
 
     @action
-    def resize(self, width, height, img_path=None, img=None):
+    def resize(self, *args, **kwargs):
+        """
+        Thumbnail and crop. Thumbnails along larger dimension and then center
+        crops to meet desired dimension.
+
+        :param width: desired width in pixels. required.
+        :param height: desired height in pixels. required.
+        :param img_path: a path to an image on the filesystem
+        :param img: a PIL Image object
+        :returns: a PIL Image object
+        """
+        return self._resize(*args, **kwargs)
+
+    @action
+    def mresize(self, *args, **kwargs):
+        """
+        Identical to `resize`, except we will allow matting on all sides of the
+        image in order to return an image that is the requested size.
+
+        :param width: desired width in pixels. required.
+        :param height: desired height in pixels. required.
+        :param img_path: a path to an image on the filesystem
+        :param img: a PIL Image object
+        :returns: a PIL Image object
+        """
+        return self._resize(*args, allow_undersized=True, **kwargs)
+
+    def _resize(
+        self, width, height, img_path=None, img=None, allow_undersized=False
+    ):
         """
         Thumbnail and crop. Thumbnails along larger dimension and then center
         crops to meet desired dimension.
@@ -174,7 +203,11 @@ class LazyThumbRenderer(View):
         source_width = img.size[0]
         source_height = img.size[1]
 
-        if width >= source_width and height >= source_height:
+        if (
+            not allow_undersized
+            and width >= source_width
+            and height >= source_height
+        ):
             return img
 
         img = self.thumbnail(
