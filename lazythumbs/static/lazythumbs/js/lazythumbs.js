@@ -1,6 +1,5 @@
 var lazythumbs = {
-    FETCH_STEP_MIN: 50,
-    MAX_SCALE_DIMENSION: 2000
+    FETCH_STEP_MIN: 50
 };
 (function(lazythumbs){
 
@@ -81,8 +80,8 @@ var lazythumbs = {
                     width = Math.min(width, data(img, 'ltmaxwidth'));
                     height = Math.min(height, data(img, 'ltmaxheight'));
                 }
-                wdelta = width - data(img, 'ltwidth');
-                hdelta = height - data(img, 'ltheight');
+                wdelta = Math.abs(width - data(img, 'ltwidth'));
+                hdelta = Math.abs(height - data(img, 'ltheight'));
 
                 // Load new images when increasing by a large enough delta
                 if (wdelta > lazythumbs.FETCH_STEP_MIN || hdelta > lazythumbs.FETCH_STEP_MIN) {
@@ -184,6 +183,44 @@ var lazythumbs = {
         return (d + step) / d;
     }
 
+    function get_first_candidate(size, origsize, allow_undersized) {
+        var height = origsize.height;
+        var width = origsize.width;
+        var ratio = size.width / size.height;
+
+        // The largest size we would allow, in the ratio requested
+        if(allow_undersized) {
+            // Continually increase our candidate image's dimensions
+            // until the candidate is larger than our requested size.
+            // The remainder will be filled with a black background.
+
+            var current = origsize;
+            var multiplier = 1;
+            var scale = scale_from_step(origsize, lazythumbs.FETCH_STEP_MIN);
+
+            while(
+                current.width < size.width || current.height < size.height
+            ) {
+                // Note: Must use the reciprocal of the actual scale to
+                // *increase* the image's size rather than decrease.
+                current = scale_size(current, 1/Math.pow(scale, multiplier));
+                multiplier++;
+            }
+
+            height = current.height
+            width = current.width
+        }
+
+        return {
+            width: (
+                size.width < size.height ? width : parseInt(height * ratio)
+            ),
+            height: (
+                size.height < size.width ? height : parseInt(width / ratio)
+            )
+        };
+    }
+
     /* round_size_up(size, origsize)
      *
      * size     {width, height} of the requested image size
@@ -195,28 +232,7 @@ var lazythumbs = {
      */
     function round_size_up(size, origsize, allow_undersized) {
         var candidate = {}
-        var ratio = size.width / size.height;
-
-        // The largest size we would allow, in the ratio requested
-        if(allow_undersized) {
-            candidate = {
-                width: size.width<size.height ?
-                    lazythumbs.MAX_SCALE_DIMENSION :
-                    parseInt(lazythumbs.MAX_SCALE_DIMENSION * ratio)
-            ,   height: size.height<size.width ?
-                    lazythumbs.MAX_SCALE_DIMENSION :
-                    parseInt(lazythumbs.MAX_SCALE_DIMENSION / ratio)
-            };
-        } else {
-            candidate = {
-                width: size.width<size.height ?
-                    origsize.width :
-                    parseInt(origsize.height * ratio)
-            ,   height: size.height<size.width ?
-                    origsize.height :
-                    parseInt(origsize.width / ratio)
-            };
-        }
+        var candidate = get_first_candidate(size, origsize, allow_undersized);
         var scale = scale_from_step(origsize, lazythumbs.FETCH_STEP_MIN);
         var current = candidate;
         var final_size = candidate;
@@ -232,7 +248,7 @@ var lazythumbs = {
             // current will be *too* *small*, so let's save the previous value.
             final_size = current;
             // The one we're looking at is still larger, so step down
-            current = scale_size(candidate, scale * multiplier);
+            current = scale_size(candidate, Math.pow(scale, multiplier));
             multiplier++;
         }
         return final_size;
