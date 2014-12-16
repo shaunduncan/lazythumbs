@@ -26,7 +26,7 @@ var lazythumbs = {
             }
         }
     }
-    
+
     function update_responsive_images(e) {
 
         var responsive_images = document.querySelectorAll('.lt-responsive-img');
@@ -231,7 +231,6 @@ var lazythumbs = {
      * sizes can request the same, cached size.
      */
     function round_size_up(size, origsize, allow_undersized) {
-        var candidate = {}
         var candidate = get_first_candidate(size, origsize, allow_undersized);
         var scale = scale_from_step(origsize, lazythumbs.FETCH_STEP_MIN);
         var current = candidate;
