@@ -16,6 +16,8 @@ LAZYTHUMBS_URL = MEDIA_URL + 'lt/'
 LAZYTHUMBS_CACHE_TIMEOUT = 60
 LAZYTHUMBS_404_CACHE_TIMEOUT = 60
 
+LAZYTHUMBS_USE_X_FOR_DIMENSIONS = True
+
 CACHES = {
         'default': {
             'BACKEND': 'django.core.cache.backends.dummy.DummyCache',

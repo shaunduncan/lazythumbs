@@ -115,11 +115,14 @@ class TestComputeIMG(TestCase):
 
     def test_mapped_secondary_url(self):
         """ if someone tries to thumbnail an image for different known url, mapping should be done """
+        old_x_for_dim = getattr(settings, 'LAZYTHUMBS_USE_X_FOR_DIMENSIONS', None)
+        settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = False
         path = "http://example.com/media/path/to/img.jpg"
         attrs = compute_img(path, "resize", "100x100")
         self.assertEqual(attrs['height'], '100')
         self.assertEqual(attrs['width'], '100')
         self.assertEqual(attrs['src'], 'http://example.com/media/lt/lt_cache/resize/100/100/path/to/img.jpg')
+        settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = old_x_for_dim
 
     def test_local_url(self):
         """ if thing is a url and it's local we can attempt to resize it """
