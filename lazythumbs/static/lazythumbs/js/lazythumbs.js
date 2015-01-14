@@ -46,6 +46,12 @@ var lazythumbs = {
                 new_ratio = old_ratio;
                 height = width * (1/old_ratio);
                 allow_undersized = true;
+            } else if (data(img, 'action') == 'matte') {
+                // Since 'matte' will *probably* be requesting an image that's
+                // larger than the underlying image (that's what the black
+                // matte is for), we should not consult the image's maximum
+                // dimensions before requesting a new image.
+                allow_undersized = true;
             } else {
                 old_ratio = data(img, 'ltwidth') / data(img, 'ltheight');
                 new_ratio = width / height;
