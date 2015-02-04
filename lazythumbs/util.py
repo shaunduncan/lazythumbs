@@ -145,7 +145,7 @@ def compute_img(thing, action, geometry, options=None):
     try:
         width, height = geometry_parse(action, geometry, ValueError)
     except ValueError, e:
-        logger.warn('got junk geometry variable resolution: %s' % e)
+        logger.debug('got junk geometry variable resolution: %s' % e)
         return exit(url, source_width(img_object), source_height(img_object))
 
     # at this point we have our geo information as well as our action. if
