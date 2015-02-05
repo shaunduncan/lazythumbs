@@ -75,7 +75,7 @@ class LazyThumbRenderer(View):
         try:
             width, height = geometry_parse(action, geometry, ValueError)
         except ValueError, e:
-            logger.debug('corrupted geometry "%s" for action "%s"' % (geometry, action))
+            logger.info('corrupted geometry "%s" for action "%s"' % (geometry, action))
             return self.four_oh_four()
 
         width = int(width) if width is not None else None
