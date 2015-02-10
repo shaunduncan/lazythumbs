@@ -26,7 +26,7 @@ will maintain the ratio of the original image.
                            |         | be specified.
                            |
                            | This parameter specifies the action to adapt the
-                           | image to the requested size. 
+                           | image to the requested size.
 
 For scale and resize actions, both the width and height are requested.
 

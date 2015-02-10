@@ -64,7 +64,7 @@ You can use the ``ratio`` keyword:
    {% endlazythumb %}
 
 Using the above, lazythumbs will calculate the available space and
-request an image that fills the available width and matches the 
+request an image that fills the available width and matches the
 specified aspect ratio (here: "16:9").
 
 Using CSS

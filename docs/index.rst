@@ -17,7 +17,7 @@ Lazythumbs provides render-on-request thumbnails for Django.
    responsive_images
 
 
-.. include:: ../README.rst
+.. include:: README.rst
 
 Indices and tables
 ==================
