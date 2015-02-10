@@ -13,7 +13,7 @@ Lazythumbs provides render-on-request thumbnails for Django.
 
    setup
    usage
-   supported_actions
+   api
    responsive_images
 
 
