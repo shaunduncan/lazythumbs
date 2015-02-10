@@ -58,7 +58,7 @@ Actions
 |               |            | returned)     |                  |
 +---------------+------------+---------------+------------------+
 | ``resize``    | Yes        | Yes (one      | Yes (only on     |
-|               |            | dimension     | dominant         |
+|               |            | dimension     | largest          |
 |               |            | only; if both | dimension,       |
 |               |            | are           | otherwise        |
 |               |            | undersized,   | resizes)         |
