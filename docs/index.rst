@@ -8,13 +8,10 @@ Welcome to Lazythumbs's documentation!
 
 Lazythumbs provides render-on-request thumbnails for Django.
 
-Contents:
-
 .. toctree::
    :maxdepth: 2
-   
 
-.. include:: README.rst
+.. include:: ../README.rst
 
 Indices and tables
 ==================

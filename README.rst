@@ -1,11 +1,12 @@
 Summary
 #######
 
-Lazythumbs acts as a PIL proxy for images stored in
-MEDIA_ROOT. It looks for the requested image and, if found,
-generates a new image and writes it to the filesystem at MEDIA_ROOT/lt_cache.
-If the request resulted in a 404, the 404 response is cached to avoid getting
-hammered by repeated requests for images that don't exist.
+Lazythumbs acts as a `PIL <http://www.pythonware.com/products/pil/>`_ proxy
+for images stored in MEDIA_ROOT. It looks for the requested image and, if
+found, generates a new image and writes it to the filesystem at
+MEDIA_ROOT/lt_cache.  If the request resulted in a 404, the 404 response is
+cached to avoid getting hammered by repeated requests for images that don't
+exist.
 
 Lazythumbs can be utilized from within a Django project's templates, or
 from without through the image request API. Images are produced and cached
@@ -41,7 +42,7 @@ Usage
 
 * use in a template
 
-.. code-block:: html
+.. code-block:: django
 
     {% load lazythumb %}
     {% lazythumb img_file scale '80x80' as img %}
@@ -50,13 +51,16 @@ Usage
     {% lazythumb img_file resize '80x60' as img %}
         <img {% img_attrs img %} alt="{{img_file.name}}" />
     {% endlazythumb %}
+    {% lazythumb img_file aresize '300x190' as img %}
+        <img {% img_attrs img %} alt="{{img_file.name}}" />
+    {% endlazythumb %}
     {% lazythumb img_file thumbnail '80' as img %}
         <img {% img_attrs img %} alt="{{img_file.name}}" />
     {% endlazythumb %}
 
 * delay the size until the layout is known, for responsive designs
 
-.. code-block:: html
+.. code-block:: django
 
     <script type="text/javascript" src="{{ STATIC_URL }}lib/lazythumbs/js/lazythumbs.js"></script>
 
@@ -67,9 +71,13 @@ Usage
 Supported Actions
 #################
 
-* **scale** scale image to desired dimensions (no attention paid to ratio)
-* **thumbnail** scale in a single dimension (eg "80" or "x48")
-* **resize** thumbnail then center crop to desired dimensions
+* **scale**: Scale image to desired dimensions (no attention paid to ratio)
+* **thumbnail**: Scale in a single dimension (eg "80" or "x48")
+* **resize**: Thumbnail then center crop to desired dimensions. Note that the
+  algorithm used sometimes produces horizontal or vertical matting.
+* **aresize**: Aspect ratio aware resize. Thumbnail and center crop with no
+  matting when resizing landscape images to landscape or when resizing portrait
+  to portrait. Shrink to fit and matte otherwise.
 
 The Template Tag
 ################
@@ -112,7 +120,7 @@ will maintain the ratio of the original image.
                            | This parameter specifies the action to adapt the
                            | image to the requested size. 
 
-For scale and resize actions, both the width and height are requested.
+For scale, resize, and aresize actions, both the width and height are requested.
 
 .. code-block:: text
 
@@ -137,7 +145,7 @@ To use this feature, be sure to load the lazythumbs.js script to support the cli
 When including your images in templates, use the special size 'responsive' to trigger the
 injection of a placeholder for the clientside script to use, like so:
 
-.. code-block:: html
+.. code-block:: django
 
     <script type="text/javascript" src="{{ STATIC_URL }}lib/lazythumbs/js/lazythumbs.js"></script>
 
@@ -182,7 +190,7 @@ recommend to achieve a ratio enforcement. In this example, we'll specify a width
 that width to enforce the height to keep at. We'll fill the available width in whatever container the
 image appears, and adjust the height to maintain a 4:3 ratio.
 
-.. code-block: html
+.. code-block: django
 
     <figure class=photo>
         <div class=elastic></div>
