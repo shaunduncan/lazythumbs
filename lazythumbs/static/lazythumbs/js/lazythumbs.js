@@ -240,8 +240,6 @@ var lazythumbs = {
         var candidate = get_first_candidate(size, origsize, allow_undersized);
         var scale = scale_from_step(origsize, lazythumbs.FETCH_STEP_MIN);
         var current = candidate;
-        var final_size = candidate;
-        var multiplier = 1;
 
         // Overview:
         //   Starting from the image's current size, scale down in steps
@@ -250,13 +248,14 @@ var lazythumbs = {
         while (current.width >= size.width && current.height >= size.height) {
             // We want to keep the size *right* *before* the last size we
             // encounter in this while loop; once the while loop breaks,
-            // current will be *too* *small*, so let's save the previous value.
-            final_size = current;
+            // current will be *too* *small*.
+
             // The one we're looking at is still larger, so step down
-            current = scale_size(candidate, Math.pow(scale, multiplier));
-            multiplier++;
+            candidate = current;
+            current = scale_size(current, scale);
+
         }
-        return final_size;
+        return candidate;
     }
 
     lazythumbs.scale_size = scale_size;
