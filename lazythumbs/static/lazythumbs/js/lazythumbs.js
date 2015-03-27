@@ -227,6 +227,13 @@ var lazythumbs = {
         };
     }
 
+    function round_size_up(size, origsize, allow_undersized) {
+        if (flipper.is_active("D-01463")) {
+            return round_size_up_maysam(size, origsize, allow_undersized);
+        }
+        return round_size_up_coddingtonbear(size, origsize, allow_undersized);
+    }
+
     /* round_size_up(size, origsize)
      *
      * size     {width, height} of the requested image size
@@ -236,10 +243,12 @@ var lazythumbs = {
      * rounded up by the step value so that multiple requests for similar
      * sizes can request the same, cached size.
      */
-    function round_size_up(size, origsize, allow_undersized) {
+    function round_size_up_coddingtonbear(size, origsize, allow_undersized) {
         var candidate = get_first_candidate(size, origsize, allow_undersized);
         var scale = scale_from_step(origsize, lazythumbs.FETCH_STEP_MIN);
         var current = candidate;
+        var final_size = candidate;
+        var multiplier = 1;
 
         // Overview:
         //   Starting from the image's current size, scale down in steps
@@ -248,12 +257,31 @@ var lazythumbs = {
         while (current.width >= size.width && current.height >= size.height) {
             // We want to keep the size *right* *before* the last size we
             // encounter in this while loop; once the while loop breaks,
-            // current will be *too* *small*.
-
+            // current will be *too* *small*, so let's save the previous value.
+            final_size = current;
             // The one we're looking at is still larger, so step down
+            current = scale_size(candidate, Math.pow(scale, multiplier));
+            multiplier++;
+        }
+        return final_size;
+    }
+
+    function round_size_up_maysam(size, origsize, allow_undersized) {
+        var candidate = get_first_candidate(size, origsize, allow_undersized);
+        var scale = scale_from_step(origsize, lazythumbs.FETCH_STEP_MIN);
+        var current = candidate;
+
+        while (current.width >= size.width && current.height >= size.height) {
+            // coddingtonbear's version ends up parseInt'ing the width and height
+            // of the final return size (through the call to scale_size),
+            // whereas this version ...
+            // parseInt's the width and height of the size at each call
+            // to scale_size.
+            // This version is similar to the one in commit: d8c543 (lazythumbs repo)
+            // before the next commit introduced the black matte borders in tease
+            // images.
             candidate = current;
             current = scale_size(current, scale);
-
         }
         return candidate;
     }
