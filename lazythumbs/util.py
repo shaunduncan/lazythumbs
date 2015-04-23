@@ -34,7 +34,7 @@ def geometry_parse(action, geometry, exc):
     height_match = re.match(r'^(?:\d+|x)?\/(\d+)$', geometry)
 
     if not (width_match or height_match):
-        ## Check for the original WidthxHeight geometry style for backwards compat.
+        # Check for the original WidthxHeight geometry style for backwards compat.
         width_match = re.match(r'^(\d+)(?:x\d+)?$', geometry)
         height_match = re.match(r'^(?:\d+)?x(\d+)$', geometry)
 
@@ -124,10 +124,10 @@ def compute_img(thing, action, geometry, options=None):
     if not url:
         return dict(src='', width='', height='')
 
-    #If the url still has a domain or scheme we can't thumb it
+    # If the url still has a domain or scheme we can't thumb it
     parsed = urlparse(url)
     if parsed.scheme or parsed.netloc:
-        return dict(src=url,  width=str(source_width(img_object) or ''), height=str(source_height(img_object) or ''))
+        return dict(src=url, width=str(source_width(img_object) or ''), height=str(source_height(img_object) or ''))
 
     # If this is a responsive image, we only need to provide a placeholder for the moment
     if geometry == 'responsive':
@@ -177,7 +177,8 @@ def compute_img(thing, action, geometry, options=None):
         s_w = source_width(img_object)
         s_h = source_height(img_object)
 
-        if _source_smaller(width, s_w) and _source_smaller(height, s_h):
+        force_scale = options.get('force_scale') == 'true'
+        if not force_scale and _source_smaller(width, s_w) and _source_smaller(height, s_h):
             return exit(url, s_w, s_h)
 
     geometry = build_geometry(action, width, height)
