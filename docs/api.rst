@@ -44,37 +44,40 @@ be created immediately, and cached for future use.
 Actions
 -------
 
-+---------------+------------+---------------+------------------+
-| Action        | Maintains  | Matte when    | Crops?           |
-|               | aspect     | undersized ?  |                  |
-|               | ratio?     |               |                  |
-+===============+============+===============+==================+
-| ``scale``     | No         | No            | No               |
-|               |            | (stretched)   |                  |
-+---------------+------------+---------------+------------------+
-| ``thumbnail`` | Yes        | No            | No               |
-|               |            | (undersized   |                  |
-|               |            | image         |                  |
-|               |            | returned)     |                  |
-+---------------+------------+---------------+------------------+
-| ``resize``    | Yes        | Yes (one      | Yes (only on     |
-|               |            | dimension     | largest          |
-|               |            | only; if both | dimension,       |
-|               |            | are           | otherwise        |
-|               |            | undersized,   | resizes)         |
-|               |            | the           |                  |
-|               |            | undersized    |                  |
-|               |            | image is      |                  |
-|               |            | returned)     |                  |
-+---------------+------------+---------------+------------------+
-| ``aresize``   | Yes        | Yes           | Yes (only if     |
-|               |            |               | source           |
-|               |            |               | orientation      |
-|               |            |               | matches          |
-|               |            |               | requested)       |
-+---------------+------------+---------------+------------------+
-| ``mresize``   | Yes        | Yes           | Yes              |
-+---------------+------------+---------------+------------------+
++---------------------+------------+---------------+------------------+
+| Action              | Maintains  | Matte when    | Crops?           |
+|                     | aspect     | undersized ?  |                  |
+|                     | ratio?     |               |                  |
++=====================+============+===============+==================+
+| ``scale``           | No         | No            | No               |
+|                     |            | (stretched)   |                  |
++---------------------+------------+---------------+------------------+
+| ``thumbnail``       | Yes        | No            | No               |
+|                     |            | (undersized   |                  |
+|                     |            | image         |                  |
+|                     |            | returned)     |                  |
++---------------------+------------+---------------+------------------+
+| ``resize``          | Yes        | Yes (one      | Yes (only on     |
+|                     |            | dimension     | largest          |
+|                     |            | only; if both | dimension,       |
+|                     |            | are           | otherwise        |
+|                     |            | undersized,   | resizes)         |
+|                     |            | the           |                  |
+|                     |            | undersized    |                  |
+|                     |            | image is      |                  |
+|                     |            | returned)     |                  |
++---------------------+------------+---------------+------------------+
+| ``aresize``         | Yes        | Yes           | Yes (only if     |
+|                     |            |               | source           |
+|                     |            |               | orientation      |
+|                     |            |               | matches          |
+|                     |            |               | requested)       |
++---------------------+------------+---------------+------------------+
+| ``mresize``         | Yes        | Yes           | Yes              |
++---------------------+------------+---------------+------------------+
+| ``aresize_no_crop`` | Yes        | Yes           | No               |
++---------------------+------------+---------------+------------------+
+
 
 ``scale``
 ~~~~~~~~~
@@ -97,6 +100,13 @@ Thumbnail then center crop to desired dimensions.
 Aspect ratio-aware resizing.  Thumbnails the image, and then center crops
 to the desired dimensions if the source image's orientation matches
 that of the requested image size's orientation.
+
+``aresize_no_crop``
+~~~~~~~~~~~
+
+Aspect ratio-aware resizing.  Thumbnails and centers the image to the
+largest it can be without exceeding the bounds of the target area
+and without cropping.
 
 ``mresize``
 ~~~~~~~~~~~
