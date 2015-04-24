@@ -184,6 +184,17 @@ class TestComputeIMG(TestCase):
             self.assertEqual(attrs['height'], '200')
         settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = old_x_for_dim
 
+    def test_width_bigger_than_img_force_scale(self):
+        """ if the force_scale parameter is passed, scale image even though it is smaller """
+        old_x_for_dim = getattr(settings, 'LAZYTHUMBS_USE_X_FOR_DIMENSIONS', None)
+        settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = False
+        with patch('lazythumbs.util.quack', self.get_fake_quack('path/img.jpg', width=100, height=200)):
+            attrs = compute_img(Mock(), 'mresize', '200x400', options={'force_scale': 'true'})
+            self.assertEqual(attrs['src'], settings.LAZYTHUMBS_URL + 'lt_cache/mresize/200/400/path/img.jpg')
+            self.assertEqual(attrs['width'], '200')
+            self.assertEqual(attrs['height'], '400')
+        settings.LAZYTHUMBS_USE_X_FOR_DIMENSIONS = old_x_for_dim
+
     def test_height_resize(self):
         """ resize with only height returns the proper path and size """
         old_x_for_dim = getattr(settings, 'LAZYTHUMBS_USE_X_FOR_DIMENSIONS', None)
