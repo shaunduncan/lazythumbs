@@ -149,12 +149,12 @@ class LazythumbRenderTest(LazythumbsTemplateTagTestCase):
 
     def test_aresize_no_crop_valid_geo(self):
         """
-        for an aresizee_no_crop, check that width/height are set appropriately in the
+        for an aresize_no_crop, check that width/height are set appropriately in the
         as variable for a valid geometry Variable.
         """
         self.context['geo'] = '48x50'
 
-        node = node_factory(LazythumbNode, "tag 'url' aresizee_no_crop geo as img")
+        node = node_factory(LazythumbNode, "tag 'url' aresize_no_crop geo as img")
         node.render(self.mock_cxt)
 
         img = self.context['img']
