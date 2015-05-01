@@ -416,21 +416,21 @@ class GetViewTest(TestCase):
         cached = mc.cache[key]
         self.assertEqual(cached, False)
 
-    # def test_no_img_should_404(self):
-    #     """
-    #     When save fails with EEXIST error, it will try to read the file again
-    #     But if it still can't be read, make sure it returns a 404 instead of 0-byte image.
-    #     """
-    #     req = Mock()
-    #     req.path = "/lt_cache/thumbnail/48/i/p.jpg"
-    #     self.renderer.fs.save = Mock()
-    #     err = OSError()
-    #     err.errno = errno.EEXIST
-    #     self.renderer.fs.save.side_effect = err
-    #     with patch('lazythumbs.views.Image', self.mock_Image):
-    #         with patch('lazythumbs.views.cache', MockCache()):
-    #             resp = self.renderer.get(req, 'thumbnail', '48', 'i/p')
-    #     self.assertEqual(resp.status_code, 404)
+    def test_no_img_should_404(self):
+        """
+        When save fails with EEXIST error, it will try to read the file again
+        But if it still can't be read, make sure it returns a 404 instead of 0-byte image.
+        """
+        req = Mock()
+        req.path = "/lt_cache/thumbnail/48/i/p.jpg"
+        self.renderer.fs.save = Mock()
+        err = OSError()
+        err.errno = errno.EEXIST
+        self.renderer.fs.save.side_effect = err
+        with patch('lazythumbs.views.Image', self.mock_Image):
+            with patch('lazythumbs.views.cache', MockCache()):
+                resp = self.renderer.get(req, 'thumbnail', '48', 'i/p')
+        self.assertEqual(resp.status_code, 404)
 
     def test_naughty_paths_root(self):
         resp = self.renderer.get(None, 'thumbnail', '48', '/')
