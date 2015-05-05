@@ -102,7 +102,7 @@ to the desired dimensions if the source image's orientation matches
 that of the requested image size's orientation.
 
 ``aresize_no_crop``
-~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 
 Aspect ratio-aware resizing.  Thumbnails and centers the image to the
 largest it can be without exceeding the bounds of the target area
