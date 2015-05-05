@@ -228,7 +228,7 @@ class LazyThumbRenderer(View):
         return img.crop((left, top, right, bottom))
 
     @action
-    def aresize(self, width, height, img_path=None, img=None):
+    def aresize(self, width, height, img_path=None, img=None, crop_img=True):
         """
         Thumbnail and crop, taking source and target aspect ratios into
         consideration. When source and target orientation is the same,
@@ -243,6 +243,7 @@ class LazyThumbRenderer(View):
         :param height: desired height in pixels. required.
         :param img_path: a path to an image on the filesystem
         :param img: a PIL Image object
+        :param crop_image: flag to turn off cropping. default True
         :returns: a PIL Image object
         """
 
@@ -261,22 +262,33 @@ class LazyThumbRenderer(View):
 
         source_is_landscape = (source_aspect >= 1.0)
         is_landscape = (aspect >= 1.0)
-
+ 
         if source_is_landscape == is_landscape:
-            # Source and target have the same orientation. Scale according to
-            # aspect ratio to maximize photo area and minimize horizontal/
-            # vertical border insertion.
-            if source_aspect > aspect:
-                # Source has wider ratio than target. Scale to height.
-                target_width, target_height = None, height
-            else:
-                # Source has taller ratio than target. Scale to width.
-                target_width, target_height = width, None
-        else:
+            if crop_img == True:
+                # Source and target have the same orientation. Scale according to
+                # aspect ratio to maximize photo area and minimize horizontal/
+                # vertical border insertion.
+                if source_aspect > aspect:
+                    # Source has wider ratio than target. Scale to height.
+                    target_width, target_height = None, height
+                else:
+                    # Source has taller ratio than target. Scale to width.
+                    target_width, target_height = width, None
+            if crop_img == False:
+                # Source and target have the same orientation. Scale according to
+                # aspect ratio and larger dimension to avoid cropping. This will
+                # matte the image.
+                if source_aspect > aspect:
+                    # Source has wider ratio than target. Scale to width.
+                    target_width, target_height = width, None
+                else:
+                    # Source has taller ratio than target. Scale to height.
+                    target_width, target_height = None, height
+        else: # crop_img is irrelevant here. The image won't be cropped regardless.
             # Source and target have opposite orientations. Scale to source's
-            # longer dimension. This will matte the image, but it will
-            # effectively maintain the visual appearance of the source
-            # orientation.
+            # longer dimension. This will not crop the image. This will matte
+            # the image, but it will effectively maintain the visual
+            # appearance of the source orientation.
             if source_is_landscape:
                 target_width, target_height = width, None
             else:
@@ -321,61 +333,7 @@ class LazyThumbRenderer(View):
         :param img: a PIL Image object
         :returns: a PIL Image object
         """
-
-        img = img or self.get_pil_from_path(img_path)
-        if not img:
-            raise ValueError('unable to find img given args')
-
-        # If we're already the right size, don't do anything.
-        if img.size == (width, height):
-            return img
-
-        source_width, source_height = img.size
-
-        source_aspect = float(source_width) / source_height
-        aspect = float(width) / height if width and height else source_aspect
-
-        source_is_landscape = (source_aspect >= 1.0)
-        is_landscape = (aspect >= 1.0)
-
-        if source_is_landscape == is_landscape:
-            # Source and target have the same orientation. Scale according to
-            # aspect ratio to maximize photo area and minimize horizontal/
-            # vertical border insertion.
-            if source_aspect > aspect:
-                # Source has wider ratio than target. Scale to width.
-                target_width, target_height = width, None
-            else:
-                # Source has taller ratio than target. Scale to height.
-                target_width, target_height = None, height
-        else:
-            # Source and target have opposite orientations. Scale to source's
-            # longer dimension. This will matte the image, but it will
-            # effectively maintain the visual appearance of the source
-            # orientation.
-            if source_is_landscape:
-                target_width, target_height = width, None
-            else:
-                target_width, target_height = None, height
-
-        # We never expand images. Resize only if the target is smaller.
-        if ((target_width and target_width < source_width) or
-                (target_height and target_height < source_height)):
-            img = self.thumbnail(
-                width = target_width,
-                height = target_height,
-                img = img
-            )
-
-        # Create a new image of the target size, and paste the resized image
-        # into it. This effectively mattes if necessary by pasting over the
-        # matte background color. This will not crop because the new image will
-        # always fit insided the target size.
-        offset_x = (width - img.size[0]) / 2
-        offset_y = (height - img.size[1]) / 2
-        result = Image.new(mode='RGB', size=(width, height), color=MATTE_BACKGROUND_COLOR)
-        result.paste(img, (offset_x, offset_y))
-        return result
+        return self.aresize(width, height, img_path=img_path, img=img, crop_img=False)
 
     @action
     def matte(self, width, height, img_path=None, img=None):
