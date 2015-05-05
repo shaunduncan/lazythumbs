@@ -262,9 +262,9 @@ class LazyThumbRenderer(View):
 
         source_is_landscape = (source_aspect >= 1.0)
         is_landscape = (aspect >= 1.0)
- 
+
         if source_is_landscape == is_landscape:
-            if crop_img == True:
+            if crop_img:
                 # Source and target have the same orientation. Scale according to
                 # aspect ratio to maximize photo area and minimize horizontal/
                 # vertical border insertion.
@@ -274,7 +274,7 @@ class LazyThumbRenderer(View):
                 else:
                     # Source has taller ratio than target. Scale to width.
                     target_width, target_height = width, None
-            if crop_img == False:
+            else:
                 # Source and target have the same orientation. Scale according to
                 # aspect ratio and larger dimension to avoid cropping. This will
                 # matte the image.
