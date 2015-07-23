@@ -42,7 +42,7 @@ class LazyThumbRenderer(View):
     """
     def __init__(self):
         self.fs = FileSystemStorage()
-        self._allowed_actions = [a.__name__
+        self.allowed_actions = [a.__name__
             for a in (getattr(self, a, None) for a in dir(self))
             if type(a) == types.MethodType and getattr(a, 'is_action', False)
         ]
@@ -68,7 +68,7 @@ class LazyThumbRenderer(View):
         if re.match('\.\./', source_path):
             logger.info("%s: blocked bad path" % source_path)
             return self.four_oh_four()
-        if action not in self._allowed_actions:
+        if action not in self.allowed_actions:
             logger.info("%s: bad action requested: %s" % (source_path, action))
             return self.four_oh_four()
 
@@ -95,7 +95,7 @@ class LazyThumbRenderer(View):
         try:
             # does rendered file already exist?
             raw_data = self.fs.open(rendered_path).read()
-        except IOError:
+        except IOError as e:
             if was_404 == 0:
                 # then it *was* here last time. if was_404 had been None then
                 # it makes sense for rendered image to not exist yet: we
@@ -122,7 +122,7 @@ class LazyThumbRenderer(View):
 
                 try:
                     pil_img.save(buf, **params)
-                except IOError:
+                except IOError as e:
                     logger.exception("pil_img.save(%r)" % params)
                     # TODO reevaluate this except when we make options smarter
                     logger.info("Failed to create new image %s . Trying without options" % rendered_path)
@@ -131,11 +131,17 @@ class LazyThumbRenderer(View):
                 buf.close()
                 try:
                     self.fs.save(rendered_path, ContentFile(raw_data))
-                except OSError, e:
+                except OSError as e:
                     if e.errno == errno.EEXIST:
-                        pass # race condition, another WSGI worker wrote file or directory first
+                        # possible race condition, another WSGI worker wrote file or directory first
+                        # try to read again
+                        try:
+                            raw_data = self.fs.open(rendered_path).read()
+                        except Exception as e:
+                            logger.exception("Unable to read image file, returning 404: %s" % e)
+                            return self.four_oh_four()
                     else:
-                        logger.exception("saving converted image")
+                        logger.exception("Saving converted image: %s" % e)
                         raise
 
             except (IOError, SuspiciousOperation, ValueError), e:
@@ -150,7 +156,7 @@ class LazyThumbRenderer(View):
         return self.two_hundred(raw_data, img_format)
 
     @action
-    def resize(self, width, height, img_path=None, img=None):
+    def resize(self, *args, **kwargs):
         """
         Thumbnail and crop. Thumbnails along larger dimension and then center
         crops to meet desired dimension.
@@ -161,14 +167,47 @@ class LazyThumbRenderer(View):
         :param img: a PIL Image object
         :returns: a PIL Image object
         """
-        img = img or self.get_pil_from_path(img_path)
-        if not img:
+        return self._resize(*args, **kwargs)
+
+    @action
+    def mresize(self, *args, **kwargs):
+        """
+        Identical to `resize`, except we will allow matting on all sides of the
+        image in order to return an image that is the requested size.
+
+        :param width: desired width in pixels. required.
+        :param height: desired height in pixels. required.
+        :param img_path: a path to an image on the filesystem
+        :param img: a PIL Image object
+        :returns: a PIL Image object
+        """
+        return self._resize(*args, allow_undersized=True, **kwargs)
+
+    def _resize(
+        self, width, height, img_path=None, img=None, allow_undersized=False
+    ):
+        """
+        Thumbnail and crop. Thumbnails along larger dimension and then center
+        crops to meet desired dimension.
+
+        :param width: desired width in pixels. required.
+        :param height: desired height in pixels. required.
+        :param img_path: a path to an image on the filesystem
+        :param img: a PIL Image object
+        :returns: a PIL Image object
+        """
+        if not (img or img_path):
             raise ValueError('unable to find img given args')
+        img = img or self.get_pil_from_path(img_path)
 
         source_width = img.size[0]
         source_height = img.size[1]
 
-        if width >= source_width and height >= source_height:
+        if (
+            not allow_undersized
+            and width >= source_width
+            and height >= source_height
+        ):
             return img
 
         img = self.thumbnail(
@@ -189,6 +228,114 @@ class LazyThumbRenderer(View):
         return img.crop((left, top, right, bottom))
 
     @action
+    def aresize(self, width, height, img_path=None, img=None, crop_img=True):
+        """
+        Thumbnail and crop, taking source and target aspect ratios into
+        consideration. When source and target orientation is the same,
+        scale to eliminate matting, and center-crop the image. When source
+        and target dimensions have opposite orientation, scale to show the
+        entire image without cropping, and matte. The former minimizes
+        visually unattractive matting, and the latter eliminates center-crop
+        body images. Due to contractual obligations, images are never
+        increased in size and are instead matted if too small.
+
+        :param width: desired width in pixels. required.
+        :param height: desired height in pixels. required.
+        :param img_path: a path to an image on the filesystem
+        :param img: a PIL Image object
+        :param crop_image: flag to turn off cropping. default True
+        :returns: a PIL Image object
+        """
+
+        img = img or self.get_pil_from_path(img_path)
+        if not img:
+            raise ValueError('unable to find img given args')
+
+        # If we're already the right size, don't do anything.
+        if img.size == (width, height):
+            return img
+
+        source_width, source_height = img.size
+
+        source_aspect = float(source_width) / source_height
+        aspect = float(width) / height if width and height else source_aspect
+
+        source_is_landscape = (source_aspect >= 1.0)
+        is_landscape = (aspect >= 1.0)
+
+        if source_is_landscape == is_landscape:
+            if crop_img:
+                # Source and target have the same orientation. Scale according to
+                # aspect ratio to maximize photo area and minimize horizontal/
+                # vertical border insertion.
+                if source_aspect > aspect:
+                    # Source has wider ratio than target. Scale to height.
+                    target_width, target_height = None, height
+                else:
+                    # Source has taller ratio than target. Scale to width.
+                    target_width, target_height = width, None
+            else:
+                # Source and target have the same orientation. Scale according to
+                # aspect ratio and larger dimension to avoid cropping. This will
+                # matte the image.
+                if source_aspect > aspect:
+                    # Source has wider ratio than target. Scale to width.
+                    target_width, target_height = width, None
+                else:
+                    # Source has taller ratio than target. Scale to height.
+                    target_width, target_height = None, height
+        else: # crop_img is irrelevant here. The image won't be cropped regardless.
+            # Source and target have opposite orientations. Scale to source's
+            # longer dimension. This will not crop the image. This will matte
+            # the image, but it will effectively maintain the visual
+            # appearance of the source orientation.
+            if source_is_landscape:
+                target_width, target_height = width, None
+            else:
+                target_width, target_height = None, height
+
+        # We never expand images. Resize only if the target is smaller.
+        if ((target_width and target_width < source_width) or
+                (target_height and target_height < source_height)):
+            img = self.thumbnail(
+                width = target_width,
+                height = target_height,
+                img = img
+            )
+
+        # see if we even have to crop
+        if img.size == (width, height):
+            return img
+
+        # Create a new image of the target size, and paste the resized image
+        # into it. This effectively mattes if necessary by pasting over the
+        # matte background color, and it crops if necessary by pasting outside
+        # the result image bounds.
+        offset_x = (width - img.size[0]) / 2
+        offset_y = (height - img.size[1]) / 2
+        result = Image.new(mode='RGB', size=(width, height), color=MATTE_BACKGROUND_COLOR)
+        result.paste(img, (offset_x, offset_y))
+        return result
+
+    @action
+    def aresize_no_crop(self, width, height, img_path=None, img=None):
+        """
+        Thumbnail and fit into target area, taking source and target aspect
+        ratios into consideration. Unless the target have the same aspect raio,
+        this will create matting. the new image will retain it's original
+        aspect ratio, and will be centered in the target area. Due to
+        contractual obligations, images are never increased in size and are
+        instead matted if too small.
+
+        :param width: desired width in pixels. required.
+        :param height: desired height in pixels. required.
+        :param img_path: a path to an image on the filesystem
+        :param img: a PIL Image object
+        :returns: a PIL Image object
+        """
+        return self.aresize(width, height, img_path=img_path, img=img, crop_img=False)
+
+    @action
     def matte(self, width, height, img_path=None, img=None):
         """
         Scale the image to fit in the given size, surrounded by a matte
@@ -200,9 +347,10 @@ class LazyThumbRenderer(View):
         :param img: a PIL Image object
         :returns: a PIL Image object
         """
-        img = img or self.get_pil_from_path(img_path)
-        if not img:
+
+        if not (img or img_path):
             raise ValueError('unable to find img given args')
+        img = img or self.get_pil_from_path(img_path)
 
         new_img = Image.new('RGB', (width, height), MATTE_BACKGROUND_COLOR)
         img.thumbnail((width, height), Image.ANTIALIAS)
@@ -223,10 +371,11 @@ class LazyThumbRenderer(View):
         :param img: a PIL Image object
         :returns: a PIL Image object
         """
+        if not (img or img_path):
+            raise ValueError('unable to find img given args')
         img = img or self.get_pil_from_path(img_path)
-        if not img:
-            raise ValueError('unable to determine find img given args')
-        if width and height or width is None and height is None:
+
+        if (width and height) or (width is None and height is None):
             raise ValueError('thumbnail requires width XOR height; got (%s, %s)' % (width, height))
 
         source_width = img.size[0]
@@ -254,9 +403,9 @@ class LazyThumbRenderer(View):
         :param img: a PIL Image object
         :returns: a PIL Image object
         """
+        if not (img or img_path):
+            raise ValueError('unable to find img given args')
         img = img or self.get_pil_from_path(img_path)
-        if not img:
-            raise ValueError('unable to determine find img given args')
 
         if width > img.size[0]:
             width = img.size[0]

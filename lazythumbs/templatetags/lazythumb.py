@@ -7,30 +7,39 @@
     {% endlazythumb %}
 """
 import logging
-import re
-import json
 
 from django.template import TemplateSyntaxError, Library, Node, Variable
-from lazythumbs.util import compute_img, get_attr_string, get_placeholder_url, get_source_img_attrs
+from lazythumbs.util import compute_img, get_attr_string
+from lazythumbs.views import LazyThumbRenderer
 
 
-# TODO this should *not* be hardcoded. it completely prevents the proper
-# utilization of the subclassing feature of the renderer. A bug, imo.
-SUPPORTED_ACTIONS = ['thumbnail', 'resize', 'matte']
+SUPPORTED_ACTIONS = LazyThumbRenderer().allowed_actions
 
 register = Library()
 logger = logging.getLogger()
 
 register.tag('lazythumb', lambda p, t: LazythumbNode(p, t))
 class LazythumbNode(Node):
-    usage = 'Expected invocation is {% lazythumb url|ImageFile|Object action geometry as variable %}'
+    usage = 'Expected invocation is {% lazythumb url|ImageFile|Object action geometry [**kwargs] as variable %}'
 
     def __init__(self, parser, token):
         # simple alias
         tse = lambda m: TemplateSyntaxError('lazythumb: %s' % m)
         bits = token.contents.split()
+
         try:
-            _, thing, action, geometry, _, as_var = bits
+            # Everything before kwargs
+            _, thing, action, geometry = bits[0:4]
+            # as variable (and the word 'as' itself)
+            if bits[-2] != 'as':
+                raise ValueError("Expected 'as' before assignment variable.")
+            as_var = bits[-1]
+            # Keyword arguments
+            self.kwargs = {}
+            raw_kwargs = bits[4:-2]
+            for kwarg in raw_kwargs:
+                kwarg_name, kwarg_value = kwarg.split('=')
+                self.kwargs[kwarg_name] = Variable(kwarg_value)
         except ValueError:
             raise tse(self.usage)
 
@@ -52,8 +61,12 @@ class LazythumbNode(Node):
         action = self.action
         geometry = self.geometry.resolve(context)
 
+        options = {}
+        for k, v in self.kwargs.items():
+            options[k] = v.resolve(context)
+
         context.push()
-        context[self.as_var] = compute_img(thing, action, geometry)
+        context[self.as_var] = compute_img(thing, action, geometry, options)
         output = self.nodelist.render(context)
         context.pop()
         return output

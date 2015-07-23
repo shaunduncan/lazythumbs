@@ -10,9 +10,13 @@ from django.conf import settings
 
 logger = logging.getLogger()
 
-LT_IMG_URL_FORMAT = getattr(settings, 'LAZYTHUMBS_URL', '/') + 'lt_cache/%s/%s/%s'
 # This is a 1x1 transparent GIF
 LT_PLACEHOLDER_SRC = "data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
+
+MAPPED_URLS = {
+    settings.MEDIA_URL: getattr(settings, 'LAZYTHUMBS_URL', '/')
+}
+MAPPED_URLS.update(getattr(settings, 'LAZYTHUMBS_EXTRA_URLS', {}))
 
 
 def geometry_parse(action, geometry, exc):
@@ -30,12 +34,12 @@ def geometry_parse(action, geometry, exc):
     height_match = re.match(r'^(?:\d+|x)?\/(\d+)$', geometry)
 
     if not (width_match or height_match):
-        ## Check for the original WidthxHeight geometry style for backwards compat.
+        # Check for the original WidthxHeight geometry style for backwards compat.
         width_match = re.match(r'^(\d+)(?:x\d+)?$', geometry)
         height_match = re.match(r'^(?:\d+)?x(\d+)$', geometry)
 
         if (width_match or height_match):
-            logger.info("Consider adopting the new 'Width/Height' syntax")
+            logger.debug("Consider adopting the new 'Width/Height' syntax")
         else:
             raise exc
 
@@ -102,8 +106,10 @@ def quack(thing, properties, levels=[], default=None):
     return default
 
 
-def compute_img(thing, action, geometry):
+def compute_img(thing, action, geometry, options=None):
     """ generate a src url, width and height tuple for given object or url"""
+    if options is None:
+        options = {}
 
     # We use these lambdas to stay lazy: we don't ever want to look up
     # source dimensions if we can avoid it.
@@ -112,16 +118,16 @@ def compute_img(thing, action, geometry):
     exit = lambda u, w, h, **_attrs: dict(src=urljoin(settings.MEDIA_URL, u), width=str(w or ''), height=str(h or ''), **_attrs)
 
     # compute url and img_object
-    url, img_object = _get_url_img_obj_from_thing(thing)
+    url, url_prefix, img_object = _get_url_img_obj_from_thing(thing)
 
     # early exit if didn't get a url
     if not url:
         return dict(src='', width='', height='')
 
-    #If the url still has a domain or scheme we can't thumb it
+    # If the url still has a domain or scheme we can't thumb it
     parsed = urlparse(url)
     if parsed.scheme or parsed.netloc:
-        return dict(src=url,  width=str(source_width(img_object) or ''), height=str(source_height(img_object) or ''))
+        return dict(src=url, width=str(source_width(img_object) or ''), height=str(source_height(img_object) or ''))
 
     # If this is a responsive image, we only need to provide a placeholder for the moment
     if geometry == 'responsive':
@@ -130,6 +136,8 @@ def compute_img(thing, action, geometry):
             'data-urltemplate': get_placeholder_url(thing),
             'data-action': action,
         }
+        if 'ratio' in options:
+            attrs['data-aspectratio'] = options['ratio']
         return exit(LT_PLACEHOLDER_SRC, source_width(thing), source_height(thing), **attrs)
 
     # extract/ensure width & height
@@ -137,7 +145,7 @@ def compute_img(thing, action, geometry):
     try:
         width, height = geometry_parse(action, geometry, ValueError)
     except ValueError, e:
-        logger.warn('got junk geometry variable resolution: %s' % e)
+        logger.debug('got junk geometry variable resolution: %s' % e)
         return exit(url, source_width(img_object), source_height(img_object))
 
     # at this point we have our geo information as well as our action. if
@@ -169,11 +177,12 @@ def compute_img(thing, action, geometry):
         s_w = source_width(img_object)
         s_h = source_height(img_object)
 
-        if _source_smaller(width, s_w) and _source_smaller(height, s_h):
+        force_scale = options.get('force_scale') == 'true'
+        if not force_scale and _source_smaller(width, s_w) and _source_smaller(height, s_h):
             return exit(url, s_w, s_h)
 
     geometry = build_geometry(action, width, height)
-    src = LT_IMG_URL_FORMAT % (action, geometry, url)
+    src = _construct_lt_img_url(url_prefix, action, geometry, url)
 
     if getattr(settings, 'LAZYTHUMBS_DUMMY', False):
         src = 'http://placekitten.com/%s/%s' % (width, height)
@@ -191,13 +200,13 @@ def get_img_url(thing, action, width=None, height=None):
 
 def get_placeholder_url(thing):
     """ return a lt_cache URL with placeholders for action and dimensions """
-    url, _ = _get_url_img_obj_from_thing(thing)
+    url, url_prefix, _ = _get_url_img_obj_from_thing(thing)
 
     parsed = urlparse(url)
     if parsed.scheme or parsed.netloc:
         return url
 
-    return LT_IMG_URL_FORMAT % ('{{ action }}', '{{ dimensions }}', url)
+    return _construct_lt_img_url(url_prefix, '{{ action }}', '{{ dimensions }}', url)
 
 
 def get_img_attrs(thing, action, width='', height=''):
@@ -230,7 +239,7 @@ def get_format(file_path):
 
 def get_attr_string(img):
     """ given an image attr dict like that returned by compute_img or get_img_attrs get the string of height width attrs for an img tag """
-    attrs = ['%s="%s"' % attr for attr in img.items() if attr[1]]
+    attrs = ['%s="%s"' % attr for attr in sorted(img.items()) if attr[1]]
     return " ".join(attrs)
 
 
@@ -242,12 +251,24 @@ def get_source_img_attrs(thing):
 
 def _get_url_img_obj_from_thing(thing):
     img_object = None
+    url_prefix = None
+
     if isinstance(thing, basestring):
         url = thing
     else:
         img_object = thing
         url = quack(img_object, ['name', 'url', 'path'], ['photo', 'image'], '')
 
-    url = url.replace(settings.MEDIA_URL, '')
+    for whitelisted_url, thumbnail_url in MAPPED_URLS.items():
+        if url.startswith(whitelisted_url):
+            url = url.replace(whitelisted_url, '')
+            url_prefix = thumbnail_url
 
-    return (url, img_object)
+    if not url_prefix:
+        url_prefix = MAPPED_URLS[settings.MEDIA_URL]
+
+    return (url, url_prefix, img_object)
+
+
+def _construct_lt_img_url(prefix, action, geometry, url):
+    return '/'.join([prefix.rstrip('/'), 'lt_cache', action, geometry, url])

@@ -7,10 +7,16 @@ DEBUG = True
 MEDIA_ROOT = PROJECT_ROOT
 INSTALLED_APPS = ( 'lazythumbs', )
 MEDIA_URL = 'http://media.example.com/media/'
+
+LAZYTHUMBS_EXTRA_URLS = {
+   'http://example.com/media/': 'http://example.com/media/lt/',
+}
 LAZYTHUMBS_URL = MEDIA_URL + 'lt/'
 
 LAZYTHUMBS_CACHE_TIMEOUT = 60
 LAZYTHUMBS_404_CACHE_TIMEOUT = 60
+
+LAZYTHUMBS_USE_X_FOR_DIMENSIONS = True
 
 CACHES = {
         'default': {
@@ -20,7 +26,8 @@ CACHES = {
 
 
 TEMPLATE_DEBUG = DEBUG
-DATABASES = {}
+DATABASES = {'default': {'ENGINE': 'django.db.backends.dummy'}}
+SECRET_KEY = "foobar"
 ADMINS = ( )
 MANAGERS = ADMINS
 TIME_ZONE = 'America/Chicago'

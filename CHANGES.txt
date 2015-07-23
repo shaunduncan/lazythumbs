@@ -1,0 +1,5 @@
+3.3.5 (unreleased)
+------------------
+
+- Add LAZYTHUMBS_EXTRA_URLS functionality to be able to use lazythumbs on external URLS (not just under settings.MEDIA_URL)
+  [Domen Kožar]

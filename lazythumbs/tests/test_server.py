@@ -1,3 +1,4 @@
+import errno
 import os
 import shutil
 import tempfile
@@ -9,6 +10,8 @@ from lazythumbs.views import LazyThumbRenderer, action
 from lazythumbs.urls import urlpatterns
 from django.core.urlresolvers import reverse, resolve
 
+
+TEST_IMG_GIF = os.path.join(os.path.dirname(__file__), "testdata", "testimage.gif")
 
 class MockCache(object):
     def __init__(self):
@@ -22,9 +25,9 @@ class MockCache(object):
 
 
 class MockImg(object):
-    def __init__(self):
+    def __init__(self, width=1000, height=1000):
         self.called = []
-        self.size = (1000, 1000)
+        self.size = (width, height)
         self.mode = "RGB"
 
     def resize(self, size, _):
@@ -37,6 +40,30 @@ class MockImg(object):
         return self
 
 
+class TestMatte(TestCase):
+
+    def test_new_img(self):
+        renderer = LazyThumbRenderer()
+        new_img = renderer.matte(200, 200, img_path=TEST_IMG_GIF)
+        self.assertEqual(new_img.size, (200, 200))
+
+    def test_no_img(self):
+        renderer = LazyThumbRenderer()
+        self.assertRaises(ValueError, renderer.matte, 200, 200)
+
+
+class TestScale(TestCase):
+
+    def test_maximum_width_and_height(self):
+        renderer = LazyThumbRenderer()
+        new_img = renderer.scale(1000, 1000, img_path=TEST_IMG_GIF)
+        self.assertEqual(new_img.size, (399, 499))
+
+    def test_no_img(self):
+        renderer = LazyThumbRenderer()
+        self.assertRaises(ValueError, renderer.scale, 200, 200)
+
+
 class RenderTest(TestCase):
     """ test image rendering process """
 
@@ -47,11 +74,11 @@ class RenderTest(TestCase):
         """
         class MyRenderer(LazyThumbRenderer):
             @action
-            def myaction(self):
+            def myaction(self):  # pragma: no cover
                 pass
 
         renderer = MyRenderer()
-        self.assertTrue('myaction' in renderer._allowed_actions)
+        self.assertTrue('myaction' in renderer.allowed_actions)
 
     def test_thumbnail_noop(self):
         """
@@ -66,6 +93,10 @@ class RenderTest(TestCase):
         self.assertEqual(img.size[1], 100)
         self.assertEqual(len(mock_img.called), 0)
 
+    def test_thumbnail_no_img(self):
+        renderer = LazyThumbRenderer()
+        self.assertRaises(ValueError, renderer.thumbnail, 200, 200)
+
     def test_thumbnail_square(self):
         """
         Test behavior of thumbnail action when no width == height
@@ -78,6 +109,18 @@ class RenderTest(TestCase):
         self.assertEqual(img.size[1], 50)
         self.assertEqual(len(mock_img.called), 1)
         self.assertTrue('resize' in mock_img.called)
+
+    def test_thumbnail_width_and_height_specified(self):
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg()
+        mock_img.size = (100, 100)
+        self.assertRaises(ValueError, renderer.thumbnail, width=50, height=50, img=mock_img)
+
+    def test_thumbnail_no_width_and_no_height_specified(self):
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg()
+        mock_img.size = (100, 100)
+        self.assertRaises(ValueError, renderer.thumbnail, img=mock_img)
 
     def test_thumbnail_no_upscaling(self):
         """
@@ -104,6 +147,10 @@ class RenderTest(TestCase):
         self.assertTrue('crop' in mock_img.called)
         self.assertTrue('resize' in mock_img.called)
 
+    def test_resize_no_img(self):
+        renderer = LazyThumbRenderer()
+        self.assertRaises(ValueError, renderer.resize, 200, 200)
+
     def test_resize_no_upscaling(self):
         """
         Ensure upscaling is forbidden in resize action.
@@ -115,6 +162,184 @@ class RenderTest(TestCase):
         self.assertEqual(img.size[0], 1000)
         self.assertEqual(img.size[1], 1000)
         self.assertEqual(len(mock_img.called), 0)
+
+    def test_aresize_width(self):
+        """
+        Ensure landscape aresize action thumbnails to width and center-crops.
+        """
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg(width=1500, height=1000)
+        mock_Image = Mock()
+
+        # aresize 1500x1000 => 750x400 should thumbnail to 750x500 and then
+        # paste into the center of a new image, losing some top/bottom content.
+        with patch('lazythumbs.views.Image', mock_Image):
+            img = renderer.aresize(width=750, height=400, img=mock_img)
+
+        self.assertEqual(mock_img.called, ['resize'])
+        self.assertEqual(img, mock_Image.new.return_value)
+        self.assertEqual(mock_Image.new.call_args[1]['size'], (750, 400))
+        img.paste.assert_called_once_with(mock_img, (0, -50))
+
+    def test_aresize_height(self):
+        """
+        Ensure landscape aresize action thumbnails to height and center-crops.
+        """
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg(width=2000, height=1000)
+        mock_Image = Mock()
+
+        # aresize 2000x1000 => 1000x800 should thumbnail to 1600x800 and then
+        # paste into the center of a new image, losing some left/right content.
+        with patch('lazythumbs.views.Image', mock_Image):
+            img = renderer.aresize(width=1000, height=800, img=mock_img)
+
+        self.assertEqual(mock_img.called, ['resize'])
+        self.assertEqual(img, mock_Image.new.return_value)
+        self.assertEqual(mock_Image.new.call_args[1]['size'], (1000, 800))
+        img.paste.assert_called_once_with(mock_img, (-300, 0))
+
+    def test_aresize_portrait(self):
+        """
+        Ensure aresize action from portrait to landscape shrinks image and
+        mattes sides.
+        """
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg(width=1000, height=2000)
+        mock_Image = Mock()
+
+        # aresize 1000x2000 => 600x500 should thumbnail to 250x500 and then
+        # paste into the center of a new image, leaving matte background
+        # content on the sides.
+        with patch('lazythumbs.views.Image', mock_Image):
+            img = renderer.aresize(width=600, height=500, img=mock_img)
+
+        self.assertEqual(mock_img.called, ['resize'])
+        self.assertEqual(img, mock_Image.new.return_value)
+        self.assertEqual(mock_Image.new.call_args[1]['size'], (600, 500))
+        img.paste.assert_called_once_with(mock_img, (175, 0))
+
+    def test_aresize_small(self):
+        """
+        Ensure aresize action does not grow a small image.
+        """
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg(width=100, height=80)
+        mock_Image = Mock()
+
+        # aresize 100x80 => 300x200 should not resize, but should paste
+        # into the center of a new image, leaving matte background content
+        # on the sides.
+        with patch('lazythumbs.views.Image', mock_Image):
+            img = renderer.aresize(width=300, height=200, img=mock_img)
+
+        self.assertEqual(mock_img.called, [])
+        self.assertEqual(img, mock_Image.new.return_value)
+        self.assertEqual(mock_Image.new.call_args[1]['size'], (300, 200))
+        img.paste.assert_called_once_with(mock_img, (100, 60))
+
+    def test_aresize_no_crop_same_orientation_wider_aspect_ratio(self):
+        """
+        Ensure aresize_no_crop action when the source and target are the
+        same orientation, and the source has a wider aspect ratio, that it
+        scales according to width and mattes the top and bottom.
+        """
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg(width=2000, height=1000)
+        mock_Image = Mock()
+
+        # aresize_no_crop 2400x1000 => 600x500 should thumbnail to 600x250 and
+        # then paste into the center of a new image, leaving matte background
+        # content on the top and bottom.
+        with patch('lazythumbs.views.Image', mock_Image):
+            img = renderer.aresize_no_crop(width=600, height=500, img=mock_img)
+
+        self.assertEqual(mock_img.called, ['resize'])
+        self.assertEqual(img, mock_Image.new.return_value)
+        self.assertEqual(mock_Image.new.call_args[1]['size'], (600, 500))
+        img.paste.assert_called_once_with(mock_img, (0, 100))
+
+    def test_aresize_no_crop_same_orientation_taller_aspect_ratio(self):
+        """
+        Ensure aresize_no_crop action when the source and target are the
+        same orientation, and the source has a taller aspect ratio, that it
+        scales according to height and mattes the sides.
+        """
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg(width=1000, height=2000)
+        mock_Image = Mock()
+
+        # aresize_no_crop 1000x2400 => 500x600 should thumbnail to 600x250 and
+        # then paste into the center of a new image, leaving matte background
+        # content on the top and bottom.
+        with patch('lazythumbs.views.Image', mock_Image):
+            img = renderer.aresize_no_crop(width=500, height=600, img=mock_img)
+
+        self.assertEqual(mock_img.called, ['resize'])
+        self.assertEqual(img, mock_Image.new.return_value)
+        self.assertEqual(mock_Image.new.call_args[1]['size'], (500, 600))
+        img.paste.assert_called_once_with(mock_img, (100, 0))
+
+    def test_aresize_no_crop_opposite_orientation_landscape(self):
+        """
+        Ensure aresize_no_crop action when the source and target are the
+        opposite orientation, and the source is landscape, that it scales
+        according to width and mattes the top and bottom.
+        """
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg(width=2000, height=1000)
+        mock_Image = Mock()
+
+        # aresize_no_crop 2000x1000 => 500x600 should thumbnail to 500x250 and
+        # then paste into the center of a new image, leaving matte background
+        # content on the top and bottom.
+        with patch('lazythumbs.views.Image', mock_Image):
+            img = renderer.aresize_no_crop(width=500, height=600, img=mock_img)
+
+        self.assertEqual(mock_img.called, ['resize'])
+        self.assertEqual(img, mock_Image.new.return_value)
+        self.assertEqual(mock_Image.new.call_args[1]['size'], (500, 600))
+        img.paste.assert_called_once_with(mock_img, (0, 175))
+
+    def test_aresize_no_crop_opposite_orientation_portrait(self):
+        """
+        Ensure aresize_no_crop action when the source and target are the
+        opposite orientation, and the source is portrait, that it scales
+        according to height and mattes sides.
+        """
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg(width=1000, height=2000)
+        mock_Image = Mock()
+
+        # aresize_no_crop 1000x2000 => 600x500 should thumbnail to 250x500 and
+        # then paste into the center of a new image, leaving matte background
+        # content on the sides.
+        with patch('lazythumbs.views.Image', mock_Image):
+            img = renderer.aresize_no_crop(width=600, height=500, img=mock_img)
+
+        self.assertEqual(mock_img.called, ['resize'])
+        self.assertEqual(img, mock_Image.new.return_value)
+        self.assertEqual(mock_Image.new.call_args[1]['size'], (600, 500))
+        img.paste.assert_called_once_with(mock_img, (175, 0))
+
+    def test_aresize_no_crop_small(self):
+        """
+        Ensure aresize_no_crop action does not grow a small image.
+        """
+        renderer = LazyThumbRenderer()
+        mock_img = MockImg(width=100, height=80)
+        mock_Image = Mock()
+
+        # aresize_no_crop 100x80 => 300x200 should not resize, but should paste
+        # into the center of a new image, leaving matte background content
+        # on the sides.
+        with patch('lazythumbs.views.Image', mock_Image):
+            img = renderer.aresize(width=300, height=200, img=mock_img)
+
+        self.assertEqual(mock_img.called, [])
+        self.assertEqual(img, mock_Image.new.return_value)
+        self.assertEqual(mock_Image.new.call_args[1]['size'], (300, 200))
+        img.paste.assert_called_once_with(mock_img, (100, 60))
 
 
 class GetViewTest(TestCase):
@@ -191,11 +416,42 @@ class GetViewTest(TestCase):
         cached = mc.cache[key]
         self.assertEqual(cached, False)
 
+    def test_no_img_should_404(self):
+        """
+        When save fails with EEXIST error, it will try to read the file again
+        But if it still can't be read, make sure it returns a 404 instead of 0-byte image.
+        """
+        req = Mock()
+        req.path = "/lt_cache/thumbnail/48/i/p.jpg"
+        self.renderer.fs.save = Mock()
+        err = OSError()
+        err.errno = errno.EEXIST
+        self.renderer.fs.save.side_effect = err
+        with patch('lazythumbs.views.Image', self.mock_Image):
+            with patch('lazythumbs.views.cache', MockCache()):
+                resp = self.renderer.get(req, 'thumbnail', '48', 'i/p')
+        self.assertEqual(resp.status_code, 404)
+
+    def test_naughty_paths_root(self):
+        resp = self.renderer.get(None, 'thumbnail', '48', '/')
+        self.assertEqual(resp.status_code, 404)
+
+    def test_naughty_paths_traverse(self):
+        resp = self.renderer.get(None, 'thumbnail', '48', '../')
+        self.assertEqual(resp.status_code, 404)
+
+    def test_invalid_action(self):
+        resp = self.renderer.get(None, 'invalid_action', '48', 'i/p')
+        self.assertEqual(resp.status_code, 404)
+
+    def test_invalid_geometry(self):
+        resp = self.renderer.get(None, 'thumbnail', '48x48x48', 'i/p')
+        self.assertEqual(resp.status_code, 404)
+
 
 class TestOddFiles(TestCase):
 
-    # Disabled for now because PIL on Hudson doesn't have JPEG support
-    def disabled_test_extensionless_gif(self):
+    def test_extensionless_gif(self):
         """If the image file is a GIF without an extension, we can produce
         a valid thumbnail for it."""
 
@@ -216,7 +472,7 @@ class TestOddFiles(TestCase):
             with patch('lazythumbs.views.settings') as settings2:
                 settings2.MEDIA_ROOT = MEDIA_ROOT
 
-                testfile = os.path.join(os.path.dirname(__file__), "testdata", "testimage.gif")
+                testfile = TEST_IMG_GIF
                 filename = None
                 try:
                     filename = os.path.join(MEDIA_ROOT, "gif_without_extension")
@@ -231,6 +487,7 @@ class TestOddFiles(TestCase):
                         geometry="x50",
                         source_path=source_path
                         )
+                    # if you get 404, jpeg encoder is probably missing for Pillow
                     self.assertEqual(200, rsp.status_code)
                 finally:
                     if filename:
@@ -267,6 +524,7 @@ class TestUrlMatching(TestCase):
     @patch('django.conf.settings')
     def test_url_matching(self, settings):
         settings.ROOT_URLCONF = urlpatterns
+        settings.USE_I18N = False
         routes_tested = 0
         for path1, path2 in test_paths(self.routes_to_test):
             routes_tested += 1
